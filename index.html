@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sonexa</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="container">
+    <h1 class="logo">SONEXA</h1>
+    <p class="sub">AI Voice Service (TTS / STT)</p>
+
+    <div class="tabs">
+      <button class="tab active">TTS</button>
+      <button class="tab disabled">STT (Скоро)</button>
+    </div>
+
+    <div class="card">
+      <textarea id="text" placeholder="Введите текст для озвучки..."></textarea>
+
+      <select id="voice">
+        <option value="serena">serena</option>
+        <option value="ryan">ryan</option>
+        <option value="aiden">aiden</option>
+        <option value="dylan">dylan</option>
+        <option value="eric">eric</option>
+        <option value="ono_anna">ono_anna</option>
+        <option value="sohee">sohee</option>
+        <option value="uncle_fu">uncle_fu</option>
+        <option value="vivian">vivian</option>
+      </select>
+
+      <button id="generate">Сгенерировать</button>
+
+      <audio id="audio" controls></audio>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
