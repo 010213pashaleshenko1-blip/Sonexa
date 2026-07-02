@@ -1,45 +1,71 @@
-const btn = document.getElementById('generate');
-const audio = document.getElementById('audio');
+const generateBtn = document.getElementById('generate');
 const textInput = document.getElementById('text');
+const voiceSelect = document.getElementById('voice');
 const charCount = document.getElementById('char-count');
-const statusContainer = document.getElementById('status-container');
+const statusSection = document.getElementById('status-section');
 const playerSection = document.getElementById('player-section');
+const audioElement = document.getElementById('audio');
 const downloadBtn = document.getElementById('download-btn');
+const copyUrlBtn = document.getElementById('copy-url-btn');
 const clearBtn = document.getElementById('clear-btn');
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('disabled')) return;
+    
+    const tab = btn.dataset.tab;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Update panels
+    document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+    document.getElementById(`${tab}-panel`).style.display = 'block';
+  });
+});
 
 // Character counter
 textInput.addEventListener('input', () => {
   charCount.textContent = textInput.value.length;
-  if (textInput.value.length > 2000) {
-    textInput.value = textInput.value.substring(0, 2000);
-    charCount.textContent = '2000';
-  }
 });
 
-function setStatus(type, text) {
-  const statusDiv = statusContainer.querySelector('.status');
-  statusDiv.className = `status ${type}`;
+// Set status message
+function setStatus(type, title, message) {
+  const status = statusSection.querySelector('.status');
+  status.className = `status ${type}`;
   
   let icon = '✓';
   if (type === 'busy') icon = '⏳';
   if (type === 'success') icon = '✓';
   if (type === 'error') icon = '✕';
   
-  statusDiv.innerHTML = `<span class="status-icon">${icon}</span><span class="status-text">${text}</span>`;
+  status.innerHTML = `
+    <span class="status-icon">${icon}</span>
+    <div class="status-content">
+      <div class="status-title">${title}</div>
+      <div class="status-message">${message}</div>
+    </div>
+  `;
 }
 
-btn.addEventListener('click', async () => {
+// Initialize status
+setStatus('idle', 'Ready', 'Enter text and click generate to create speech');
+
+// Generate button
+generateBtn.addEventListener('click', async () => {
   const text = textInput.value.trim();
-  const voice = document.getElementById('voice').value;
+  const voice = voiceSelect.value;
 
   if (!text) {
-    setStatus('error', 'Please enter some text to convert to speech');
+    setStatus('error', 'Empty Text', 'Please enter some text to convert to speech');
     return;
   }
 
-  btn.disabled = true;
-  setStatus('busy', 'Generating your speech...');
+  generateBtn.disabled = true;
   playerSection.style.display = 'none';
+  setStatus('busy', 'Generating', 'Creating your speech... This may take a few seconds');
 
   try {
     const res = await fetch('/api/tts', {
@@ -51,31 +77,48 @@ btn.addEventListener('click', async () => {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data?.error || 'Generation failed');
+      throw new Error(data?.error || 'Failed to generate speech');
     }
 
     if (data.audio_url) {
-      audio.src = data.audio_url;
+      audioElement.src = data.audio_url;
       playerSection.style.display = 'block';
-      await audio.play().catch(() => {});
-      setStatus('success', 'Your speech is ready!');
+      playerSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      
+      await audioElement.play().catch(() => {});
+      setStatus('success', 'Complete', 'Your speech is ready to play!');
     } else {
-      throw new Error('No audio returned');
+      throw new Error('No audio URL returned');
     }
   } catch (error) {
-    setStatus('error', `Error: ${error.message}`);
+    setStatus('error', 'Error', error.message || 'An unexpected error occurred');
   } finally {
-    btn.disabled = false;
+    generateBtn.disabled = false;
   }
 });
 
 // Download button
 downloadBtn.addEventListener('click', () => {
-  if (audio.src) {
+  if (audioElement.src) {
     const a = document.createElement('a');
-    a.href = audio.src;
-    a.download = 'speech.mp3';
+    a.href = audioElement.src;
+    a.download = `sonexa-speech-${new Date().getTime()}.mp3`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+  }
+});
+
+// Copy URL button
+copyUrlBtn.addEventListener('click', () => {
+  if (audioElement.src) {
+    navigator.clipboard.writeText(audioElement.src).then(() => {
+      const originalText = copyUrlBtn.textContent;
+      copyUrlBtn.textContent = '✓ Copied!';
+      setTimeout(() => {
+        copyUrlBtn.innerHTML = '<span class="btn-icon">🔗</span>Copy URL';
+      }, 2000);
+    });
   }
 });
 
@@ -83,11 +126,16 @@ downloadBtn.addEventListener('click', () => {
 clearBtn.addEventListener('click', () => {
   textInput.value = '';
   charCount.textContent = '0';
-  audio.src = '';
+  audioElement.src = '';
   playerSection.style.display = 'none';
-  setStatus('idle', 'Ready to generate');
-  btn.disabled = false;
+  setStatus('idle', 'Ready', 'Enter text and click generate to create speech');
+  generateBtn.disabled = false;
+  textInput.focus();
 });
 
-// Initialize
-setStatus('idle', 'Ready to generate');
+// Allow Enter+Ctrl to submit
+textInput.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    generateBtn.click();
+  }
+});
