@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 9000);
 
-    const hfToken = process.env.hf_token;
+    const hfToken = process.env.HF_TOKEN;
     if (!hfToken) {
       return res.status(500).json({ error: 'HF token not configured' });
     }
