@@ -26,6 +26,15 @@ export default async function handler(req, res) {
 
     clearTimeout(timeout);
 
+    // Проверяем статус ответа ДО парсинга JSON
+    if (!hfRes.ok) {
+      const raw = await hfRes.text();
+      return res.status(502).json({
+        error: `HF API error: ${hfRes.status} ${hfRes.statusText}`,
+        debug: raw.slice(0, 300)
+      });
+    }
+
     const raw = await hfRes.text();
 
     let json;
