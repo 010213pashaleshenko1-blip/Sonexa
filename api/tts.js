@@ -13,10 +13,16 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 9000);
 
+    const hfToken = process.env.hf_token;
+    if (!hfToken) {
+      return res.status(500).json({ error: 'HF token not configured' });
+    }
+
     const hfRes = await fetch('https://cartik-sonexa-1-server.hf.space/run/predict', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${hfToken}`
       },
       body: JSON.stringify({
         data: [text.trim(), voice || 'serena']
