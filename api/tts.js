@@ -18,7 +18,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'HF token not configured' });
     }
 
-    const hfRes = await fetch('https://cartik-sonexa-1-server.hf.space/api/predict', {
+    // Первый запрос - начинаем обработку на Gradio
+    const initRes = await fetch('https://cartik-sonexa-1-server.hf.space/api/call/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -32,33 +33,69 @@ export default async function handler(req, res) {
 
     clearTimeout(timeout);
 
-    // Проверяем статус ответа ДО парсинга JSON
-    if (!hfRes.ok) {
-      const raw = await hfRes.text();
+    if (!initRes.ok) {
+      const raw = await initRes.text();
       return res.status(502).json({
-        error: `HF API error: ${hfRes.status} ${hfRes.statusText}`,
+        error: `HF API error: ${initRes.status} ${initRes.statusText}`,
         debug: raw.slice(0, 300)
       });
     }
 
-    const raw = await hfRes.text();
+    const initData = await initRes.json();
+    const callHash = initData.hash;
 
-    let json;
-    try {
-      json = JSON.parse(raw);
-    } catch {
+    if (!callHash) {
       return res.status(502).json({
-        error: 'HF returned non-JSON response',
-        debug: raw.slice(0, 300)
+        error: 'Failed to get call hash from Gradio',
+        debug: initData
       });
     }
 
-    const audioUrl = json?.data?.[0];
+    // Второй запрос - получаем результат
+    let audioUrl = null;
+    let attempts = 0;
+    const maxAttempts = 30; // Максимум 30 попыток * 200ms = 6 секунд
+
+    while (!audioUrl && attempts < maxAttempts) {
+      attempts++;
+      
+      const statusRes = await fetch(`https://cartik-sonexa-1-server.hf.space/api/call/predict/status/${callHash}`, {
+        headers: {
+          'Authorization': `Bearer ${hfToken}`
+        },
+        signal: controller.signal
+      });
+
+      if (!statusRes.ok) {
+        const raw = await statusRes.text();
+        return res.status(502).json({
+          error: `HF status check error: ${statusRes.status}`,
+          debug: raw.slice(0, 300)
+        });
+      }
+
+      const statusData = await statusRes.json();
+
+      if (statusData.data) {
+        audioUrl = statusData.data[0];
+        break;
+      }
+
+      if (statusData.status === 'FAILED') {
+        return res.status(502).json({
+          error: 'Gradio processing failed',
+          debug: statusData
+        });
+      }
+
+      // Ждём 200мс перед следующей попыткой
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
 
     if (!audioUrl) {
       return res.status(502).json({
-        error: 'No audio returned from HF',
-        debug: json
+        error: 'Timeout waiting for audio from HF',
+        debug: `No result after ${attempts} attempts`
       });
     }
 
