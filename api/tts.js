@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'HF token not configured' });
     }
 
-    const hfRes = await fetch('https://username-spacename.hf.space/api/predict', {
+    const hfRes = await fetch('https://cartik-sonexa-1-server.hf.space/api/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
