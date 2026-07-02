@@ -3,177 +3,201 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sonexa - AI Voice Service</title>
+  <title>Sonexa - Синтез речи на основе ИИ</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-container">
-    <!-- Navigation -->
+    <!-- Навигация -->
     <nav class="navbar">
       <div class="navbar-content">
         <div class="logo-section">
           <span class="logo">Sonexa</span>
-          <span class="beta-badge">BETA</span>
+          <span class="beta-badge">БЕТА</span>
         </div>
         <div class="nav-links">
-          <a href="#" class="nav-link">Docs</a>
-          <a href="#" class="nav-link">Pricing</a>
-          <a href="#" class="nav-link">About</a>
+          <button class="nav-link nav-btn" data-page="main">Главная</button>
+          <button class="nav-link nav-btn" data-page="about">О проекте</button>
+          <a href="https://github.com" class="nav-link" target="_blank">GitHub</a>
         </div>
       </div>
     </nav>
 
-    <!-- Main Container -->
+    <!-- Основной контейнер -->
     <main class="main-container">
-      <!-- Hero Section -->
-      <section class="hero">
-        <div class="hero-content">
-          <h1 class="hero-title">Transform Text to Speech</h1>
-          <p class="hero-subtitle">Powered by advanced AI models. Natural, expressive voices in seconds.</p>
-        </div>
-      </section>
+      <!-- Главная страница -->
+      <div id="main-page" class="page active">
+        <!-- Hero секция -->
+        <section class="hero">
+          <div class="hero-content">
+            <h1 class="hero-title">Преобразуй текст в речь</h1>
+            <p class="hero-subtitle">Технология искусственного интеллекта для создания естественной речи. Быстро, качественно, надежно.</p>
+          </div>
+        </section>
 
-      <!-- Tab Navigation -->
-      <div class="tab-container">
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="tts">
-            <span class="tab-icon">🔊</span>
-            <span>Text to Speech</span>
-          </button>
-          <button class="tab-btn disabled" data-tab="stt">
-            <span class="tab-icon">🎤</span>
-            <span>Speech to Text</span>
-            <span class="coming-soon">Coming Soon</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- TTS Panel -->
-      <div class="panel" id="tts-panel">
-        <div class="panel-grid">
-          <!-- Left Column -->
-          <div class="column">
-            <div class="form-group">
-              <label class="form-label">Your Text</label>
-              <textarea 
-                id="text" 
-                class="text-input"
-                placeholder="Enter the text you want to convert to speech. Try something interesting..."
-                maxlength="2000"
-              ></textarea>
-              <div class="char-count">
-                <span id="char-count">0</span> / 2,000
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Voice</label>
-              <select id="voice" class="voice-select">
-                <optgroup label="Female Voices">
-                  <option value="serena">Serena - Warm & Friendly</option>
-                  <option value="ono_anna">Ono Anna - Soft & Gentle</option>
-                  <option value="sohee">Sohee - Energetic & Clear</option>
-                  <option value="vivian">Vivian - Professional & Confident</option>
-                </optgroup>
-                <optgroup label="Male Voices">
-                  <option value="ryan">Ryan - Professional & Calm</option>
-                  <option value="aiden">Aiden - Neutral & Clear</option>
-                  <option value="dylan">Dylan - Casual & Friendly</option>
-                  <option value="eric">Eric - Formal & Strong</option>
-                  <option value="uncle_fu">Uncle Fu - Storyteller & Warm</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <button id="generate" class="btn btn-primary btn-large">
-              <span class="btn-icon">✨</span>
-              <span class="btn-text">Generate Speech</span>
-              <span class="btn-arrow">→</span>
+        <!-- Вкладки -->
+        <div class="tab-container">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="tts">
+              <span class="tab-icon">🔊</span>
+              <span>Текст в речь</span>
+            </button>
+            <button class="tab-btn disabled" data-tab="stt">
+              <span class="tab-icon">🎤</span>
+              <span>Речь в текст</span>
+              <span class="coming-soon">Скоро</span>
             </button>
           </div>
+        </div>
 
-          <!-- Right Column -->
-          <div class="column">
-            <!-- Status Section -->
-            <div id="status-section" class="status-section">
-              <div id="status" class="status idle">
-                <span class="status-icon">✓</span>
-                <div class="status-content">
-                  <div class="status-title">Ready</div>
-                  <div class="status-message">Enter text and click generate to create speech</div>
+        <!-- TTS панель -->
+        <div class="panel" id="tts-panel">
+          <div class="panel-grid">
+            <!-- Левая колонка -->
+            <div class="column">
+              <div class="form-group">
+                <label class="form-label">Твой текст</label>
+                <textarea 
+                  id="text" 
+                  class="text-input"
+                  placeholder="Введи текст, который нужно озвучить..."
+                  maxlength="2000"
+                ></textarea>
+                <div class="char-count">
+                  <span id="char-count">0</span> / 2000
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Голос</label>
+                <select id="voice" class="voice-select">
+                  <optgroup label="Женские голоса">
+                    <option value="serena">Серена - Тёплый и дружелюбный</option>
+                    <option value="ono_anna">Анна - Мягкий и нежный</option>
+                    <option value="sohee">Софи - Энергичный и ясный</option>
+                    <option value="vivian">Виктория - Профессиональный тон</option>
+                  </optgroup>
+                  <optgroup label="Мужские голоса">
+                    <option value="ryan">Райан - Профессиональный</option>
+                    <option value="aiden">Эйден - Нейтральный и ясный</option>
+                    <option value="dylan">Дилан - Непринужденный тон</option>
+                    <option value="eric">Эрик - Формальный и сильный</option>
+                    <option value="uncle_fu">Дядя Фу - Рассказчик</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <button id="generate" class="btn btn-primary btn-large">
+                <span class="btn-icon">✨</span>
+                <span class="btn-text">Создать речь</span>
+                <span class="btn-arrow">→</span>
+              </button>
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="column">
+              <!-- Статус -->
+              <div id="status-section" class="status-section">
+                <div id="status" class="status idle">
+                  <span class="status-icon">✓</span>
+                  <div class="status-content">
+                    <div class="status-title">Готово</div>
+                    <div class="status-message">Введи текст и нажми кнопку, чтобы создать речь</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Плеер -->
+              <div id="player-section" class="player-section" style="display: none;">
+                <div class="player-header">
+                  <h3 class="player-title">Результат</h3>
+                  <button id="clear-btn" class="btn-icon-only" title="Закрыть плеер">
+                    ✕
+                  </button>
+                </div>
+                <audio id="audio" controls class="audio-player"></audio>
+                <div class="player-actions">
+                  <button id="download-btn" class="btn btn-secondary">
+                    <span class="btn-icon">⬇</span>
+                    Скачать
+                  </button>
+                  <button id="copy-url-btn" class="btn btn-secondary">
+                    <span class="btn-icon">🔗</span>
+                    Копировать ссылку
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Player Section (Hidden by default) -->
-            <div id="player-section" class="player-section" style="display: none;">
-              <div class="player-header">
-                <h3 class="player-title">Generated Audio</h3>
-                <button id="clear-btn" class="btn-icon-only" title="Clear and start over">
-                  ✕
-                </button>
-              </div>
-              <audio id="audio" controls class="audio-player"></audio>
-              <div class="player-actions">
-                <button id="download-btn" class="btn btn-secondary">
-                  <span class="btn-icon">⬇</span>
-                  Download
-                </button>
-                <button id="copy-url-btn" class="btn btn-secondary">
-                  <span class="btn-icon">🔗</span>
-                  Copy URL
-                </button>
-              </div>
+        <!-- Возможности -->
+        <section class="features">
+          <h2 class="section-title">Почему выбирают Sonexa?</h2>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">🎯</div>
+              <h4>Высокое качество</h4>
+              <p>Синтез речи премиум-класса с естественной интонацией</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">⚡</div>
+              <h4>Молниеносно быстро</h4>
+              <p>Создавай аудиофайлы за считанные секунды</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🗣️</div>
+              <h4>Много голосов</h4>
+              <p>Выбирай из разнообразных профессионально обученных голосов</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🔒</div>
+              <h4>Надежность</h4>
+              <p>Твои данные обрабатываются безопасно и приватно</p>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- STT Panel (Disabled) -->
-      <div class="panel disabled" id="stt-panel" style="display: none;">
-        <div class="panel-placeholder">
-          <div class="placeholder-icon">🎤</div>
-          <h3>Speech to Text</h3>
-          <p>Convert speech to text with high accuracy. Coming soon!</p>
-        </div>
-      </div>
+      <!-- Страница "О проекте" -->
+      <div id="about-page" class="page">
+        <section class="about-section">
+          <h1 class="about-title">О Sonexa</h1>
+          
+          <div class="about-content">
+            <div class="about-card">
+              <h2>История проекта</h2>
+              <p>Sonexa родился из простой идеи: сделать синтез речи доступным, быстрым и качественным. Проект создавался одним разработчиком без бюджета, используя только открытые исходные коды, ИИ-модели и упорство.</p>
+              <p>Начинаясь как экспериментальный проект, Sonexa быстро эволюционировал в полнофункциональный сервис синтеза речи. Каждый улучшение, каждая оптимизация — результат самоотверженной работы и вера в возможность создать что-то полезное для людей.</p>
+            </div>
 
-      <!-- Features Section -->
-      <section class="features">
-        <h2 class="section-title">Why Choose Sonexa?</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">🎯</div>
-            <h4>High Quality</h4>
-            <p>Premium voice synthesis with natural intonation</p>
+            <div class="about-card">
+              <h2>Sonexa Inc.</h2>
+              <p>Сегодня Sonexa — это официальная компания, основанная на базе успешного проекта. Несмотря на скромные начальные ресурсы, мы доказали, что качественный продукт может появиться благодаря страсти к коду и инновациям.</p>
+              <p>Наша миссия: дать каждому доступ к передовым технологиям синтеза речи. Будь то контент-мейкер, разработчик или просто человек, которому нужна естественная озвучка — Sonexa здесь для тебя.</p>
+            </div>
+
+            <div class="about-card">
+              <h2>Сделано в России 🇷🇺</h2>
+              <p>Sonexa развивается в России и для России. Мы гордимся тем, что создаем передовые технологии, которые конкурируют с мировыми аналогами. Наша команда верит, что инновация не требует огромных инвестиций — она требует идей, знаний и готовности работать.</p>
+              <p>Спасибо за то, что используешь Sonexa. Твоя поддержка вдохновляет нас на дальнейшее развитие!</p>
+            </div>
           </div>
-          <div class="feature-card">
-            <div class="feature-icon">⚡</div>
-            <h4>Lightning Fast</h4>
-            <p>Generate audio in seconds, not minutes</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🌍</div>
-            <h4>Multiple Voices</h4>
-            <p>Choose from diverse, professionally trained voices</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔒</div>
-            <h4>Secure</h4>
-            <p>Your data is processed securely and privately</p>
-          </div>
-        </div>
-      </section>
+
+          <button class="nav-link nav-btn" data-page="main" style="margin-top: 40px;">
+            ← Вернуться на главную
+          </button>
+        </section>
+      </div>
     </main>
 
-    <!-- Footer -->
+    <!-- Подвал -->
     <footer class="footer">
       <div class="footer-content">
-        <p>&copy; 2024 Sonexa. Powered by Hugging Face.</p>
+        <p>&copy; 2024 Sonexa Inc. Создано с ❤️ в России.</p>
         <div class="footer-links">
-          <a href="#">Privacy</a>
-          <a href="#">Terms</a>
-          <a href="#">Support</a>
+          <a href="#" onclick="document.querySelector('[data-page=about]').click()">О проекте</a>
+          <a href="https://github.com" target="_blank">GitHub</a>
         </div>
       </div>
     </footer>
