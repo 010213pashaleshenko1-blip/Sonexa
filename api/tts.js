@@ -11,16 +11,10 @@ export default async function handler(req, res) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-    const hfToken = process.env.HF_TOKEN;
-    if (!hfToken) {
-      clearTimeout(timeout);
-      return res.status(500).json({ error: 'HF token not configured' });
-    }
-
-    // Gradio 5.16.0 - используем /run/predict
-    const hfRes = await fetch('https://cartik-sonexa-1-server.hf.space/run/predict', {
+    // Попробуем /api/predict для Gradio 5.16.0
+    const hfRes = await fetch('https://cartik-sonexa-1-server.hf.space/api/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,7 +38,6 @@ export default async function handler(req, res) {
 
     const result = await hfRes.json();
     
-    // Gradio возвращает результат в data[0]
     const audioUrl = result?.data?.[0];
 
     if (!audioUrl) {
@@ -55,7 +48,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Если URL relative, добавляем базовый URL
     const fullUrl = audioUrl.startsWith('http') 
       ? audioUrl 
       : `https://cartik-sonexa-1-server.hf.space${audioUrl}`;
@@ -65,7 +57,7 @@ export default async function handler(req, res) {
     console.error('API Error:', err);
     return res.status(500).json({
       error: err?.name === 'AbortError' 
-        ? 'Request timeout (30s limit)' 
+        ? 'Timeout (30s limit)' 
         : err.message || String(err)
     });
   }
