@@ -3,50 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sonexa</title>
+  <title>Sonexa - AI Voice Service</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-
   <main class="container">
-    <header class="hero">
-      <div class="badge">SONEXA</div>
-      <h1>AI Voice Service</h1>
-      <p>Text-to-Speech сейчас, Speech-to-Text — скоро.</p>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <h1 class="logo">Sonexa</h1>
+        <p class="tagline">Transform text into natural-sounding speech</p>
+      </div>
     </header>
 
-    <section class="tabs">
-      <button class="tab active">TTS</button>
-      <button class="tab disabled" disabled>STT (Скоро)</button>
-    </section>
-
-    <section class="card">
-      <label class="field-label" for="text">Текст</label>
-      <textarea id="text" placeholder="Введите текст для озвучки..."></textarea>
-
-      <label class="field-label" for="voice">Голос</label>
-      <select id="voice">
-        <option value="serena">serena</option>
-        <option value="ryan">ryan</option>
-        <option value="aiden">aiden</option>
-        <option value="dylan">dylan</option>
-        <option value="eric">eric</option>
-        <option value="ono_anna">ono_anna</option>
-        <option value="sohee">sohee</option>
-        <option value="uncle_fu">uncle_fu</option>
-        <option value="vivian">vivian</option>
-      </select>
-
-      <button id="generate" class="primary-btn">Сгенерировать</button>
-
-      <div id="status" class="status">Готов к генерации.</div>
-
-      <div class="player-wrap">
-        <audio id="audio" controls></audio>
+    <!-- Main Card -->
+    <div class="card">
+      <!-- Input Section -->
+      <div class="input-section">
+        <label class="field-label" for="text">Your Text</label>
+        <textarea 
+          id="text" 
+          class="text-input"
+          placeholder="Enter the text you'd like to convert to speech..."
+          spellcheck="true"
+        ></textarea>
+        <div class="char-count">
+          <span id="char-count">0</span> / 2000 characters
+        </div>
       </div>
-    </section>
+
+      <!-- Voice Selection -->
+      <div class="voice-section">
+        <label class="field-label" for="voice">Voice</label>
+        <div class="voice-grid">
+          <select id="voice" class="voice-select">
+            <option value="serena">Serena (Female, Warm)</option>
+            <option value="ryan">Ryan (Male, Professional)</option>
+            <option value="aiden">Aiden (Male, Neutral)</option>
+            <option value="dylan">Dylan (Male, Casual)</option>
+            <option value="eric">Eric (Male, Formal)</option>
+            <option value="ono_anna">Ono Anna (Female, Soft)</option>
+            <option value="sohee">Sohee (Female, Friendly)</option>
+            <option value="uncle_fu">Uncle Fu (Male, Storyteller)</option>
+            <option value="vivian">Vivian (Female, Energetic)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button id="generate" class="btn btn-primary">
+          <span class="btn-text">Generate Speech</span>
+          <span class="btn-icon">→</span>
+        </button>
+      </div>
+
+      <!-- Status -->
+      <div id="status" class="status-container">
+        <div class="status idle">
+          <span class="status-icon">✓</span>
+          <span class="status-text">Ready to generate</span>
+        </div>
+      </div>
+
+      <!-- Player -->
+      <div class="player-section" id="player-section" style="display: none;">
+        <label class="field-label">Your Audio</label>
+        <div class="player-wrapper">
+          <audio id="audio" controls class="audio-player"></audio>
+        </div>
+        <div class="player-actions">
+          <button id="download-btn" class="btn btn-secondary" title="Download audio">
+            ⬇ Download
+          </button>
+          <button id="clear-btn" class="btn btn-secondary" title="Clear and start over">
+            🔄 New
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Powered by Hugging Face • Built with ❤️</p>
+    </footer>
   </main>
 
   <script src="/src/app.js"></script>
