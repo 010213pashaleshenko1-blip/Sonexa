@@ -1,3 +1,4 @@
+// DOM элементы
 const generateBtn = document.getElementById('generate');
 const textInput = document.getElementById('text');
 const voiceSelect = document.getElementById('voice');
@@ -9,29 +10,45 @@ const downloadBtn = document.getElementById('download-btn');
 const copyUrlBtn = document.getElementById('copy-url-btn');
 const clearBtn = document.getElementById('clear-btn');
 
-// Tab switching
+// Переключение страниц
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
+    
+    // Скрыть все страницы
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    
+    // Показать нужную страницу
+    document.getElementById(`${page}-page`).classList.add('active');
+    
+    // Прокрутить вверх
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+// Переключение вкладок TTS/STT
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.classList.contains('disabled')) return;
     
     const tab = btn.dataset.tab;
     
-    // Update tab buttons
+    // Обновить кнопки вкладок
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     
-    // Update panels
+    // Обновить панели
     document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
     document.getElementById(`${tab}-panel`).style.display = 'block';
   });
 });
 
-// Character counter
+// Счётчик символов
 textInput.addEventListener('input', () => {
   charCount.textContent = textInput.value.length;
 });
 
-// Set status message
+// Установить статус
 function setStatus(type, title, message) {
   const status = statusSection.querySelector('.status');
   status.className = `status ${type}`;
@@ -50,22 +67,22 @@ function setStatus(type, title, message) {
   `;
 }
 
-// Initialize status
-setStatus('idle', 'Ready', 'Enter text and click generate to create speech');
+// Инициализация статуса
+setStatus('idle', 'Готово', 'Введи текст и нажми кнопку, чтобы создать речь');
 
-// Generate button
+// Кнопка генерирования речи
 generateBtn.addEventListener('click', async () => {
   const text = textInput.value.trim();
   const voice = voiceSelect.value;
 
   if (!text) {
-    setStatus('error', 'Empty Text', 'Please enter some text to convert to speech');
+    setStatus('error', 'Пусто', 'Пожалуйста, введи текст для озвучки');
     return;
   }
 
   generateBtn.disabled = true;
   playerSection.style.display = 'none';
-  setStatus('busy', 'Generating', 'Creating your speech... This may take a few seconds');
+  setStatus('busy', 'Создаём речь', 'Пожалуйста, подожди... это может занять несколько секунд');
 
   try {
     const res = await fetch('/api/tts', {
@@ -77,7 +94,7 @@ generateBtn.addEventListener('click', async () => {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data?.error || 'Failed to generate speech');
+      throw new Error(data?.error || 'Ошибка при создании речи');
     }
 
     if (data.audio_url) {
@@ -86,18 +103,18 @@ generateBtn.addEventListener('click', async () => {
       playerSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       
       await audioElement.play().catch(() => {});
-      setStatus('success', 'Complete', 'Your speech is ready to play!');
+      setStatus('success', 'Готово!', 'Твоя речь создана и готова к прослушиванию');
     } else {
-      throw new Error('No audio URL returned');
+      throw new Error('Нет URL аудиофайла в ответе');
     }
   } catch (error) {
-    setStatus('error', 'Error', error.message || 'An unexpected error occurred');
+    setStatus('error', 'Ошибка', error.message || 'Произошла неожиданная ошибка');
   } finally {
     generateBtn.disabled = false;
   }
 });
 
-// Download button
+// Кнопка скачивания
 downloadBtn.addEventListener('click', () => {
   if (audioElement.src) {
     const a = document.createElement('a');
@@ -109,31 +126,33 @@ downloadBtn.addEventListener('click', () => {
   }
 });
 
-// Copy URL button
+// Кнопка копирования ссылки
 copyUrlBtn.addEventListener('click', () => {
   if (audioElement.src) {
     navigator.clipboard.writeText(audioElement.src).then(() => {
-      const originalText = copyUrlBtn.textContent;
-      copyUrlBtn.textContent = '✓ Copied!';
+      const originalHTML = copyUrlBtn.innerHTML;
+      copyUrlBtn.innerHTML = '<span class="btn-icon">✓</span>Скопировано!';
       setTimeout(() => {
-        copyUrlBtn.innerHTML = '<span class="btn-icon">🔗</span>Copy URL';
+        copyUrlBtn.innerHTML = originalHTML;
       }, 2000);
+    }).catch(() => {
+      setStatus('error', 'Ошибка', 'Не удалось скопировать ссылку');
     });
   }
 });
 
-// Clear button
+// Кнопка очистки
 clearBtn.addEventListener('click', () => {
   textInput.value = '';
   charCount.textContent = '0';
   audioElement.src = '';
   playerSection.style.display = 'none';
-  setStatus('idle', 'Ready', 'Enter text and click generate to create speech');
+  setStatus('idle', 'Готово', 'Введи текст и нажми кнопку, чтобы создать речь');
   generateBtn.disabled = false;
   textInput.focus();
 });
 
-// Allow Enter+Ctrl to submit
+// Горячая клавиша: Ctrl+Enter для отправки
 textInput.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
     generateBtn.click();
