@@ -20,10 +20,17 @@ export default async function handler(req, res) {
       "https://cartik-sonexa-1-server.hf.space"
     );
 
+    try {
     const result = await client.predict("/predict", {
-      text: text.trim(),
-      speaker: voice || "serena",
+        text: text.trim(),
+        speaker: voice || "serena",
     });
+
+    console.log(result);
+} catch (e) {
+    console.error(e);
+    throw e;
+    }
 
     const file = result.data;
 
