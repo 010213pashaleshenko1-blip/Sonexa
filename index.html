@@ -7,87 +7,177 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="container">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <h1 class="logo">Sonexa</h1>
-        <p class="tagline">Transform text into natural-sounding speech</p>
-      </div>
-    </header>
-
-    <!-- Main Card -->
-    <div class="card">
-      <!-- Input Section -->
-      <div class="input-section">
-        <label class="field-label" for="text">Your Text</label>
-        <textarea 
-          id="text" 
-          class="text-input"
-          placeholder="Enter the text you'd like to convert to speech..."
-          spellcheck="true"
-        ></textarea>
-        <div class="char-count">
-          <span id="char-count">0</span> / 2000 characters
+  <div class="app-container">
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="navbar-content">
+        <div class="logo-section">
+          <span class="logo">Sonexa</span>
+          <span class="beta-badge">BETA</span>
+        </div>
+        <div class="nav-links">
+          <a href="#" class="nav-link">Docs</a>
+          <a href="#" class="nav-link">Pricing</a>
+          <a href="#" class="nav-link">About</a>
         </div>
       </div>
+    </nav>
 
-      <!-- Voice Selection -->
-      <div class="voice-section">
-        <label class="field-label" for="voice">Voice</label>
-        <div class="voice-grid">
-          <select id="voice" class="voice-select">
-            <option value="serena">Serena (Female, Warm)</option>
-            <option value="ryan">Ryan (Male, Professional)</option>
-            <option value="aiden">Aiden (Male, Neutral)</option>
-            <option value="dylan">Dylan (Male, Casual)</option>
-            <option value="eric">Eric (Male, Formal)</option>
-            <option value="ono_anna">Ono Anna (Female, Soft)</option>
-            <option value="sohee">Sohee (Female, Friendly)</option>
-            <option value="uncle_fu">Uncle Fu (Male, Storyteller)</option>
-            <option value="vivian">Vivian (Female, Energetic)</option>
-          </select>
+    <!-- Main Container -->
+    <main class="main-container">
+      <!-- Hero Section -->
+      <section class="hero">
+        <div class="hero-content">
+          <h1 class="hero-title">Transform Text to Speech</h1>
+          <p class="hero-subtitle">Powered by advanced AI models. Natural, expressive voices in seconds.</p>
         </div>
-      </div>
+      </section>
 
-      <!-- Controls -->
-      <div class="controls">
-        <button id="generate" class="btn btn-primary">
-          <span class="btn-text">Generate Speech</span>
-          <span class="btn-icon">→</span>
-        </button>
-      </div>
-
-      <!-- Status -->
-      <div id="status" class="status-container">
-        <div class="status idle">
-          <span class="status-icon">✓</span>
-          <span class="status-text">Ready to generate</span>
-        </div>
-      </div>
-
-      <!-- Player -->
-      <div class="player-section" id="player-section" style="display: none;">
-        <label class="field-label">Your Audio</label>
-        <div class="player-wrapper">
-          <audio id="audio" controls class="audio-player"></audio>
-        </div>
-        <div class="player-actions">
-          <button id="download-btn" class="btn btn-secondary" title="Download audio">
-            ⬇ Download
+      <!-- Tab Navigation -->
+      <div class="tab-container">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tts">
+            <span class="tab-icon">🔊</span>
+            <span>Text to Speech</span>
           </button>
-          <button id="clear-btn" class="btn btn-secondary" title="Clear and start over">
-            🔄 New
+          <button class="tab-btn disabled" data-tab="stt">
+            <span class="tab-icon">🎤</span>
+            <span>Speech to Text</span>
+            <span class="coming-soon">Coming Soon</span>
           </button>
         </div>
       </div>
-    </div>
+
+      <!-- TTS Panel -->
+      <div class="panel" id="tts-panel">
+        <div class="panel-grid">
+          <!-- Left Column -->
+          <div class="column">
+            <div class="form-group">
+              <label class="form-label">Your Text</label>
+              <textarea 
+                id="text" 
+                class="text-input"
+                placeholder="Enter the text you want to convert to speech. Try something interesting..."
+                maxlength="2000"
+              ></textarea>
+              <div class="char-count">
+                <span id="char-count">0</span> / 2,000
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Voice</label>
+              <select id="voice" class="voice-select">
+                <optgroup label="Female Voices">
+                  <option value="serena">Serena - Warm & Friendly</option>
+                  <option value="ono_anna">Ono Anna - Soft & Gentle</option>
+                  <option value="sohee">Sohee - Energetic & Clear</option>
+                  <option value="vivian">Vivian - Professional & Confident</option>
+                </optgroup>
+                <optgroup label="Male Voices">
+                  <option value="ryan">Ryan - Professional & Calm</option>
+                  <option value="aiden">Aiden - Neutral & Clear</option>
+                  <option value="dylan">Dylan - Casual & Friendly</option>
+                  <option value="eric">Eric - Formal & Strong</option>
+                  <option value="uncle_fu">Uncle Fu - Storyteller & Warm</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <button id="generate" class="btn btn-primary btn-large">
+              <span class="btn-icon">✨</span>
+              <span class="btn-text">Generate Speech</span>
+              <span class="btn-arrow">→</span>
+            </button>
+          </div>
+
+          <!-- Right Column -->
+          <div class="column">
+            <!-- Status Section -->
+            <div id="status-section" class="status-section">
+              <div id="status" class="status idle">
+                <span class="status-icon">✓</span>
+                <div class="status-content">
+                  <div class="status-title">Ready</div>
+                  <div class="status-message">Enter text and click generate to create speech</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Player Section (Hidden by default) -->
+            <div id="player-section" class="player-section" style="display: none;">
+              <div class="player-header">
+                <h3 class="player-title">Generated Audio</h3>
+                <button id="clear-btn" class="btn-icon-only" title="Clear and start over">
+                  ✕
+                </button>
+              </div>
+              <audio id="audio" controls class="audio-player"></audio>
+              <div class="player-actions">
+                <button id="download-btn" class="btn btn-secondary">
+                  <span class="btn-icon">⬇</span>
+                  Download
+                </button>
+                <button id="copy-url-btn" class="btn btn-secondary">
+                  <span class="btn-icon">🔗</span>
+                  Copy URL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STT Panel (Disabled) -->
+      <div class="panel disabled" id="stt-panel" style="display: none;">
+        <div class="panel-placeholder">
+          <div class="placeholder-icon">🎤</div>
+          <h3>Speech to Text</h3>
+          <p>Convert speech to text with high accuracy. Coming soon!</p>
+        </div>
+      </div>
+
+      <!-- Features Section -->
+      <section class="features">
+        <h2 class="section-title">Why Choose Sonexa?</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h4>High Quality</h4>
+            <p>Premium voice synthesis with natural intonation</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h4>Lightning Fast</h4>
+            <p>Generate audio in seconds, not minutes</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🌍</div>
+            <h4>Multiple Voices</h4>
+            <p>Choose from diverse, professionally trained voices</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h4>Secure</h4>
+            <p>Your data is processed securely and privately</p>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <!-- Footer -->
     <footer class="footer">
-      <p>Powered by Hugging Face • Built with ❤️</p>
+      <div class="footer-content">
+        <p>&copy; 2024 Sonexa. Powered by Hugging Face.</p>
+        <div class="footer-links">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Support</a>
+        </div>
+      </div>
     </footer>
-  </main>
+  </div>
 
   <script src="/src/app.js"></script>
 </body>
