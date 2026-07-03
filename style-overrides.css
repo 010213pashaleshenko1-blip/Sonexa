@@ -1,0 +1,15 @@
+.nav-links {
+  flex: 0 1 38%;
+  justify-content: flex-end;
+  max-width: 420px;
+  margin-left: auto;
+}
+
+@media (max-width: 760px) {
+  .nav-links {
+    flex: 1 1 auto;
+    max-width: none;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
