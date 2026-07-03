@@ -3,14 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const HF_TOKEN = process.env.HF_TOKEN;
   const BASE = "https://cartik-sonexa-1-server.hf.space";
-
-  if (!HF_TOKEN) {
-    return res.status(500).json({
-      error: "HF_TOKEN is not configured"
-    });
-  }
 
   try {
     const { text, voice } = req.body || {};
@@ -22,7 +15,6 @@ export default async function handler(req, res) {
     }
 
     const headers = {
-      "Authorization": `Bearer ${HF_TOKEN}`,
       "Content-Type": "application/json"
     };
 
@@ -56,10 +48,7 @@ export default async function handler(req, res) {
     const streamRes = await fetch(
       `${BASE}/gradio_api/call/predict/${event_id}`,
       {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`
-        }
+        method: "GET"
       }
     );
 
