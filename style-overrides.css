@@ -1,15 +1,11 @@
 .nav-links {
-  flex: 0 1 38%;
-  justify-content: flex-end;
-  max-width: 420px;
-  margin-left: auto;
+  width: min(100%, 420px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 760px) {
   .nav-links {
-    flex: 1 1 auto;
-    max-width: none;
-    margin-left: 0;
-    justify-content: flex-start;
+    width: 100%;
+    grid-template-columns: 1fr;
   }
 }
