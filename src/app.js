@@ -13,32 +13,6 @@ const menuToggle = document.getElementById('menu-toggle');
 const navDrawer = document.getElementById('nav-drawer');
 const overlay = document.getElementById('overlay');
 
-const ICONS = {
-  idle: `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  `,
-  busy: `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M21 12a9 9 0 1 1-3.1-6.8" />
-      <path d="M21 3v6h-6" />
-    </svg>
-  `,
-  success: `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="m20 6-11 11-5-5" />
-    </svg>
-  `,
-  error: `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  `,
-};
-
 const DEFAULT_STATUS = {
   title: 'Готово',
   message: 'Введи текст и нажми кнопку, чтобы создать речь',
@@ -53,25 +27,11 @@ function escapeHTML(value) {
     .replaceAll("'", '&#39;');
 }
 
-function setStatus(type, title, message) {
-  const status = statusSection?.querySelector('.status');
-  if (!status) return;
-
-  status.className = `status ${type}`;
-  const icon = ICONS[type] || ICONS.idle;
-
-  status.innerHTML = `
-    <span class="status-icon" aria-hidden="true">${icon}</span>
-    <div class="status-content">
-      <div class="status-title">${escapeHTML(title)}</div>
-      <div class="status-message">${escapeHTML(message)}</div>
-    </div>
-  `;
-}
-
-function updateCharCount() {
-  if (charCount) {
-    charCount.textContent = String(textInput.value.length);
+function safeJSONParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
   }
 }
 
@@ -103,47 +63,64 @@ function toggleMenu() {
   }
 }
 
-function setPage(page) {
-  document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
-  const nextPage = document.getElementById(`${page}-page`);
-  if (nextPage) nextPage.classList.add('active');
+function setStatus(type, title, message) {
+  const status = statusSection?.querySelector('.status');
+  if (!status) return;
+
+  const icons = {
+    idle: '✓',
+    busy: '⏳',
+    success: '✓',
+    error: '✕',
+  };
+
+  status.className = `status ${type}`;
+  status.innerHTML = `
+    <span class="status-icon" aria-hidden="true">${icons[type] || icons.idle}</span>
+    <div class="status-content">
+      <div class="status-title">${escapeHTML(title)}</div>
+      <div class="status-message">${escapeHTML(message)}</div>
+    </div>
+  `;
+}
+
+function updateCharCount() {
+  if (charCount && textInput) {
+    charCount.textContent = String(textInput.value.length);
+  }
+}
+
+function showPage(page, { pushState = true } = {}) {
+  const target = document.getElementById(`${page}-page`);
+  const pages = document.querySelectorAll('.page');
+
+  if (!target || pages.length === 0) {
+    return false;
+  }
+
+  pages.forEach((p) => p.classList.remove('active'));
+  target.classList.add('active');
 
   document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.page === page && !btn.dataset.tab);
+    btn.classList.toggle('is-active', btn.dataset.page === page);
   });
 
-  closeMenu();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function setActiveTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach((btn) => btn.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach((panel) => {
-    panel.style.display = 'none';
-  });
-
-  const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-  if (activeBtn) activeBtn.classList.add('active');
-
-  const activePanel = document.getElementById(`${tab}-panel`);
-  if (activePanel) activePanel.style.display = 'block';
-
-  document.querySelectorAll('.nav-btn[data-tab]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.tab === tab);
-  });
-}
-
-function openMainTab(tab) {
-  setPage('main');
-  setActiveTab(tab);
-}
-
-function safeJSONParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
+  if (pushState) {
+    const url = new URL(window.location.href);
+    if (page === 'main') {
+      url.searchParams.delete('page');
+    } else {
+      url.searchParams.set('page', page);
+    }
+    window.history.pushState({ page }, '', url);
   }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  return true;
+}
+
+function openTTSPage() {
+  window.location.href = 'tts.html';
 }
 
 // Drawer controls
@@ -153,164 +130,142 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeMenu();
 });
 
-// Navigation
-document.querySelectorAll('.nav-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    if (btn.disabled || btn.classList.contains('is-disabled')) return;
+// Close drawer on any nav click
+Array.from(document.querySelectorAll('.nav-link')).forEach((link) => {
+  link.addEventListener('click', () => {
+    closeMenu();
+  });
+});
 
+// Main-page navigation buttons
+Array.from(document.querySelectorAll('[data-page-jump]')).forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.pageJump;
+    if (target === 'tts') {
+      openTTSPage();
+      return;
+    }
+    if (target) {
+      showPage(target);
+    }
+  });
+});
+
+Array.from(document.querySelectorAll('.nav-btn[data-page]')).forEach((btn) => {
+  btn.addEventListener('click', () => {
     const page = btn.dataset.page;
-    const tab = btn.dataset.tab;
+    if (page) showPage(page);
+  });
+});
 
-    if (page && tab) {
-      openMainTab(tab);
+// Page state from URL (index.html only)
+const initialPage = new URL(window.location.href).searchParams.get('page') || 'main';
+if (document.getElementById('main-page')) {
+  showPage(initialPage, { pushState: false });
+}
+
+// TTS form logic (only on tts.html)
+if (textInput && generateBtn && voiceSelect) {
+  updateCharCount();
+  setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
+
+  textInput.addEventListener('input', updateCharCount);
+
+  generateBtn.addEventListener('click', async () => {
+    const text = textInput.value.trim();
+    const voice = voiceSelect.value;
+
+    if (!text) {
+      setStatus('error', 'Пусто', 'Пожалуйста, введи текст для озвучки');
+      textInput.focus();
       return;
     }
 
-    if (page) {
-      setPage(page);
-      return;
-    }
-
-    if (tab) {
-      openMainTab(tab);
-    }
-  });
-});
-
-// Welcome-window shortcuts
-const pageJumpButtons = document.querySelectorAll('[data-page-jump]');
-pageJumpButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const page = btn.dataset.pageJump;
-    if (!page) return;
-    setPage(page);
-  });
-});
-
-const tabJumpButtons = document.querySelectorAll('[data-tab-jump]');
-tabJumpButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tabJump;
-    if (!tab) return;
-    openMainTab(tab);
-  });
-});
-
-// TTS/STT tabs
-document.querySelectorAll('.tab-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    if (btn.classList.contains('disabled')) return;
-    const tab = btn.dataset.tab;
-    if (!tab) return;
-    openMainTab(tab);
-  });
-});
-
-// Input state
-textInput?.addEventListener('input', updateCharCount);
-updateCharCount();
-
-// Initial state
-setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
-setPage('main');
-setActiveTab('tts');
-closeMenu();
-
-// Generate speech
-generateBtn?.addEventListener('click', async () => {
-  const text = textInput.value.trim();
-  const voice = voiceSelect.value;
-
-  if (!text) {
-    setStatus('error', 'Пусто', 'Пожалуйста, введи текст для озвучки');
-    textInput.focus();
-    return;
-  }
-
-  generateBtn.disabled = true;
-  playerSection.style.display = 'none';
-  setStatus('busy', 'Создаём речь', 'Пожалуйста, подожди — это может занять несколько секунд');
-
-  try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice }),
-    });
-
-    const raw = await res.text();
-    const data = safeJSONParse(raw) || {};
-
-    if (!res.ok) {
-      throw new Error(data?.error || 'Ошибка при создании речи');
-    }
-
-    if (!data.audio_url) {
-      throw new Error('Нет URL аудиофайла в ответе');
-    }
-
-    audioElement.src = data.audio_url;
-    playerSection.style.display = 'block';
-    playerSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    generateBtn.disabled = true;
+    playerSection && (playerSection.style.display = 'none');
+    setStatus('busy', 'Создаём речь', 'Пожалуйста, подожди — это может занять несколько секунд');
 
     try {
-      await audioElement.play();
-    } catch {
-      // Autoplay can be blocked by the browser. That's fine.
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice }),
+      });
+
+      const raw = await res.text();
+      const data = safeJSONParse(raw) || {};
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Ошибка при создании речи');
+      }
+
+      if (!data.audio_url) {
+        throw new Error('Нет URL аудиофайла в ответе');
+      }
+
+      if (audioElement) {
+        audioElement.src = data.audio_url;
+      }
+      if (playerSection) {
+        playerSection.style.display = 'block';
+        playerSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      try {
+        await audioElement?.play();
+      } catch {
+        // Autoplay can be blocked by the browser. That's fine.
+      }
+
+      setStatus('success', 'Готово!', 'Твоя речь создана и готова к прослушиванию');
+    } catch (error) {
+      setStatus('error', 'Ошибка', error?.message || 'Произошла неожиданная ошибка');
+    } finally {
+      generateBtn.disabled = false;
     }
+  });
 
-    setStatus('success', 'Готово!', 'Твоя речь создана и готова к прослушиванию');
-  } catch (error) {
-    setStatus('error', 'Ошибка', error?.message || 'Произошла неожиданная ошибка');
-  } finally {
+  downloadBtn?.addEventListener('click', () => {
+    if (!audioElement?.src) return;
+
+    const link = document.createElement('a');
+    link.href = audioElement.src;
+    link.download = `sonexa-speech-${Date.now()}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  });
+
+  copyUrlBtn?.addEventListener('click', async () => {
+    if (!audioElement?.src) return;
+
+    const originalHTML = copyUrlBtn.innerHTML;
+
+    try {
+      await navigator.clipboard.writeText(audioElement.src);
+      copyUrlBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">✓</span>Скопировано!';
+      setTimeout(() => {
+        copyUrlBtn.innerHTML = originalHTML;
+      }, 1800);
+    } catch {
+      setStatus('error', 'Ошибка', 'Не удалось скопировать ссылку');
+    }
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    textInput.value = '';
+    updateCharCount();
+    if (audioElement) audioElement.src = '';
+    if (playerSection) playerSection.style.display = 'none';
+    setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
     generateBtn.disabled = false;
-  }
-});
+    textInput.focus();
+  });
 
-// Download audio
-downloadBtn?.addEventListener('click', () => {
-  if (!audioElement.src) return;
-
-  const link = document.createElement('a');
-  link.href = audioElement.src;
-  link.download = `sonexa-speech-${Date.now()}.mp3`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-});
-
-// Copy URL
-copyUrlBtn?.addEventListener('click', async () => {
-  if (!audioElement.src) return;
-
-  const originalHTML = copyUrlBtn.innerHTML;
-
-  try {
-    await navigator.clipboard.writeText(audioElement.src);
-    copyUrlBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">✓</span>Скопировано!';
-    setTimeout(() => {
-      copyUrlBtn.innerHTML = originalHTML;
-    }, 1800);
-  } catch {
-    setStatus('error', 'Ошибка', 'Не удалось скопировать ссылку');
-  }
-});
-
-// Clear player
-clearBtn?.addEventListener('click', () => {
-  textInput.value = '';
-  updateCharCount();
-  audioElement.src = '';
-  playerSection.style.display = 'none';
-  setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
-  generateBtn.disabled = false;
-  textInput.focus();
-});
-
-// Ctrl+Enter send
-textInput?.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    e.preventDefault();
-    generateBtn.click();
-  }
-});
+  textInput.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      generateBtn.click();
+    }
+  });
+}
