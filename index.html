@@ -47,6 +47,16 @@
               </span>
               <span>Главная</span>
             </button>
+            <a class="nav-link" href="tts.html">
+              <span class="icon icon-sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="4" />
+                  <path d="M7 9h10" />
+                  <path d="M7 13h6" />
+                </svg>
+              </span>
+              <span>TTS</span>
+            </a>
             <button class="nav-link nav-btn" data-page="about" type="button">
               <span class="icon icon-sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -60,18 +70,8 @@
           </div>
 
           <div class="nav-group">
-            <div class="nav-group-title">Вкладки</div>
-            <button class="nav-link nav-btn" data-tab="tts" data-page="main" type="button">
-              <span class="icon icon-sm" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="16" rx="4" />
-                  <path d="M7 9h10" />
-                  <path d="M7 13h6" />
-                </svg>
-              </span>
-              <span>TTS</span>
-            </button>
-            <button class="nav-link nav-btn is-disabled" data-tab="stt" data-page="main" type="button" disabled>
+            <div class="nav-group-title">Сервисы</div>
+            <button class="nav-link nav-btn is-disabled" type="button" disabled>
               <span class="icon icon-sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
@@ -100,7 +100,7 @@
             </p>
 
             <div class="welcome-actions">
-              <button class="btn btn-primary" data-tab-jump="tts" type="button">
+              <button class="btn btn-primary" data-page-jump="tts" type="button">
                 <span class="icon icon-sm" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="4" width="18" height="16" rx="4" />
@@ -126,184 +126,6 @@
               <span class="hero-pill">Натуральные голоса</span>
               <span class="hero-pill">Быстрая генерация</span>
               <span class="hero-pill">Приватный поток</span>
-            </div>
-          </div>
-        </section>
-
-        <div class="tab-container">
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="tts" type="button">
-              <span class="tab-icon icon icon-sm" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="16" rx="4" />
-                  <path d="M7 9h10" />
-                  <path d="M7 13h6" />
-                </svg>
-              </span>
-              <span>TTS</span>
-            </button>
-            <button class="tab-btn disabled" data-tab="stt" type="button" disabled>
-              <span class="tab-icon icon icon-sm" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
-                  <path d="M19 11a7 7 0 0 1-14 0" />
-                  <path d="M12 18v4" />
-                </svg>
-              </span>
-              <span>STT</span>
-              <span class="coming-soon">Скоро</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="panel" id="tts-panel">
-          <div class="panel-grid">
-            <div class="column">
-              <div class="form-group">
-                <label class="form-label" for="text">Твой текст</label>
-                <textarea
-                  id="text"
-                  class="text-input"
-                  placeholder="Введи текст, который нужно озвучить..."
-                  maxlength="2000"
-                ></textarea>
-                <div class="char-count">
-                  <span id="char-count">0</span> / 2000
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="voice">Голос</label>
-                <select id="voice" class="voice-select">
-                  <optgroup label="Женские голоса">
-                    <option value="serena">Серена - Тёплый и дружелюбный</option>
-                    <option value="ono_anna">Анна - Мягкий и нежный</option>
-                    <option value="sohee">Софи - Энергичный и ясный</option>
-                    <option value="vivian">Виктория - Профессиональный тон</option>
-                  </optgroup>
-                  <optgroup label="Мужские голоса">
-                    <option value="ryan">Райан - Профессиональный</option>
-                    <option value="aiden">Эйден - Нейтральный и ясный</option>
-                    <option value="dylan">Дилан - Непринужденный тон</option>
-                    <option value="eric">Эрик - Формальный и сильный</option>
-                    <option value="uncle_fu">Дядя Фу - Рассказчик</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <button id="generate" class="btn btn-primary btn-large" type="button">
-                <span class="icon icon-sm" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 3v18" />
-                    <path d="M5 10l7-7 7 7" />
-                  </svg>
-                </span>
-                <span class="btn-text">Создать речь</span>
-                <span class="btn-arrow" aria-hidden="true">→</span>
-              </button>
-            </div>
-
-            <div class="column">
-              <div id="status-section" class="status-section">
-                <div id="status" class="status idle">
-                  <span class="status-icon">✓</span>
-                  <div class="status-content">
-                    <div class="status-title">Готово</div>
-                    <div class="status-message">Введи текст и нажми кнопку, чтобы создать речь</div>
-                  </div>
-                </div>
-              </div>
-
-              <div id="player-section" class="player-section" style="display: none;">
-                <div class="player-header">
-                  <h3 class="player-title">
-                    <span class="icon icon-sm" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12a7 7 0 0 1 14 0" />
-                        <path d="M8 12a4 4 0 0 1 8 0" />
-                        <path d="M12 12v7" />
-                      </svg>
-                    </span>
-                    Результат
-                  </h3>
-                  <button id="clear-btn" class="btn-icon-only" title="Закрыть плеер" aria-label="Закрыть плеер" type="button">
-                    <span class="icon icon-sm" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 6 6 18" />
-                        <path d="m6 6 12 12" />
-                      </svg>
-                    </span>
-                  </button>
-                </div>
-                <audio id="audio" controls class="audio-player"></audio>
-                <div class="player-actions">
-                  <button id="download-btn" class="btn btn-secondary" type="button">
-                    <span class="icon icon-sm" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3v12" />
-                        <path d="m8 11 4 4 4-4" />
-                        <path d="M5 19h14" />
-                      </svg>
-                    </span>
-                    Скачать
-                  </button>
-                  <button id="copy-url-btn" class="btn btn-secondary" type="button">
-                    <span class="icon icon-sm" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="9" y="9" width="11" height="11" rx="2" />
-                        <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-                      </svg>
-                    </span>
-                    Копировать ссылку
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <section class="features">
-          <h2 class="section-title">Почему выбирают Sonexa?</h2>
-          <div class="features-grid">
-            <div class="feature-card">
-              <div class="feature-icon icon" aria-hidden="true">
-                <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2 3 14h7l-1 8 12-14h-7l-2-6Z" />
-                </svg>
-              </div>
-              <h4>Высокое качество</h4>
-              <p>Синтез речи премиум-класса с естественной интонацией.</p>
-            </div>
-            <div class="feature-card">
-              <div class="feature-icon icon" aria-hidden="true">
-                <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 1 1-3.1-6.8" />
-                  <path d="M21 3v6h-6" />
-                </svg>
-              </div>
-              <h4>Молниеносно быстро</h4>
-              <p>Создавай аудиофайлы за считанные секунды.</p>
-            </div>
-            <div class="feature-card">
-              <div class="feature-icon icon" aria-hidden="true">
-                <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 3a7 7 0 0 0-7 7v1a7 7 0 0 0 14 0v-1a7 7 0 0 0-7-7Z" />
-                  <path d="M8 21h8" />
-                  <path d="M12 17v4" />
-                </svg>
-              </div>
-              <h4>Много голосов</h4>
-              <p>Выбирай из разнообразных профессионально обученных голосов.</p>
-            </div>
-            <div class="feature-card">
-              <div class="feature-icon icon" aria-hidden="true">
-                <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z" />
-                  <path d="m9 12 2 2 4-4" />
-                </svg>
-              </div>
-              <h4>Надёжность</h4>
-              <p>Твои данные обрабатываются безопасно и приватно.</p>
             </div>
           </div>
         </section>
