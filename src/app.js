@@ -90,6 +90,12 @@ function updateCharCount() {
   }
 }
 
+function updateNavState(page) {
+  document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.page === page);
+  });
+}
+
 function showPage(page, { pushState = true } = {}) {
   const target = document.getElementById(`${page}-page`);
   const pages = document.querySelectorAll('.page');
@@ -100,10 +106,7 @@ function showPage(page, { pushState = true } = {}) {
 
   pages.forEach((p) => p.classList.remove('active'));
   target.classList.add('active');
-
-  document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.page === page);
-  });
+  updateNavState(page);
 
   if (pushState) {
     const url = new URL(window.location.href);
@@ -115,12 +118,13 @@ function showPage(page, { pushState = true } = {}) {
     window.history.pushState({ page }, '', url);
   }
 
+  closeMenu();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   return true;
 }
 
 function openTTSPage() {
-  window.location.href = 'tts.html';
+  showPage('tts');
 }
 
 // Drawer controls
@@ -130,41 +134,28 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeMenu();
 });
 
-// Close drawer on any nav click
-Array.from(document.querySelectorAll('.nav-link')).forEach((link) => {
-  link.addEventListener('click', () => {
-    closeMenu();
-  });
-});
-
-// Main-page navigation buttons
-Array.from(document.querySelectorAll('[data-page-jump]')).forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.pageJump;
-    if (target === 'tts') {
-      openTTSPage();
-      return;
-    }
-    if (target) {
-      showPage(target);
-    }
-  });
-});
-
-Array.from(document.querySelectorAll('.nav-btn[data-page]')).forEach((btn) => {
+// Navigation buttons and links
+document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
     if (page) showPage(page);
   });
 });
 
-// Page state from URL (index.html only)
+document.querySelectorAll('[data-page-jump]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.pageJump;
+    if (page) showPage(page);
+  });
+});
+
+// If the page is loaded with ?page=tts or ?page=about
 const initialPage = new URL(window.location.href).searchParams.get('page') || 'main';
-if (document.getElementById('main-page')) {
+if (document.querySelector('.page')) {
   showPage(initialPage, { pushState: false });
 }
 
-// TTS form logic (only on tts.html)
+// TTS form logic (runs on the same shell only if TTS elements exist)
 if (textInput && generateBtn && voiceSelect) {
   updateCharCount();
   setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
