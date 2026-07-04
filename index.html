@@ -3,72 +3,136 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f6f1e8" />
+  <meta name="theme-color" content="#151515" />
   <title>Sonexa — AI Voice Studio</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="style-overrides.css" />
 </head>
 <body>
   <div class="app-container">
     <nav class="navbar">
       <div class="navbar-content">
-        <div class="logo-section">
-          <div class="logo-mark" aria-hidden="true">
-            <svg class="icon icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3c1.7 0 3.3.5 4.5 1.5" />
-              <path d="M7 6.5A8 8 0 0 1 12 5" />
-              <path d="M5 12a7 7 0 0 1 14 0" />
-              <path d="M7 17.5A8 8 0 0 0 12 19" />
-              <path d="M12 21c-1.7 0-3.3-.5-4.5-1.5" />
-            </svg>
-          </div>
-          <div>
-            <div class="logo">Sonexa</div>
-            <span class="beta-badge">БЕТА</span>
+        <div class="navbar-top">
+          <button id="menu-toggle" class="menu-toggle" aria-label="Открыть меню" aria-expanded="false" type="button">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <div class="logo-section">
+            <div class="logo-mark" aria-hidden="true">
+              <svg class="icon icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3c1.7 0 3.3.5 4.5 1.5" />
+                <path d="M7 6.5A8 8 0 0 1 12 5" />
+                <path d="M5 12a7 7 0 0 1 14 0" />
+                <path d="M7 17.5A8 8 0 0 0 12 19" />
+                <path d="M12 21c-1.7 0-3.3-.5-4.5-1.5" />
+              </svg>
+            </div>
+            <div class="brand-text">
+              <div class="logo">Sonexa</div>
+              <span class="beta-badge">БЕТА</span>
+            </div>
           </div>
         </div>
 
-        <div class="nav-links">
-          <button class="nav-link nav-btn" data-page="main">
-            <span class="icon icon-sm" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 10.5 12 3l9 7.5" />
-                <path d="M5 10v10h14V10" />
-              </svg>
-            </span>
-            <span>Главная</span>
-          </button>
-          <button class="nav-link nav-btn" data-page="about">
-            <span class="icon icon-sm" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 11v5" />
-                <path d="M12 8h.01" />
-              </svg>
-            </span>
-            <span>О проекте</span>
-          </button>
+        <div id="nav-drawer" class="nav-drawer" aria-hidden="true">
+          <div class="nav-group">
+            <div class="nav-group-title">Страницы</div>
+            <button class="nav-link nav-btn" data-page="main" type="button">
+              <span class="icon icon-sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 10.5 12 3l9 7.5" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+              </span>
+              <span>Главная</span>
+            </button>
+            <button class="nav-link nav-btn" data-page="about" type="button">
+              <span class="icon icon-sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 11v5" />
+                  <path d="M12 8h.01" />
+                </svg>
+              </span>
+              <span>О проекте</span>
+            </button>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-group-title">Вкладки</div>
+            <button class="nav-link nav-btn" data-tab="tts" data-page="main" type="button">
+              <span class="icon icon-sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="4" />
+                  <path d="M7 9h10" />
+                  <path d="M7 13h6" />
+                </svg>
+              </span>
+              <span>TTS</span>
+            </button>
+            <button class="nav-link nav-btn is-disabled" data-tab="stt" data-page="main" type="button" disabled>
+              <span class="icon icon-sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+                  <path d="M19 11a7 7 0 0 1-14 0" />
+                  <path d="M12 18v4" />
+                </svg>
+              </span>
+              <span>STT</span>
+              <span class="coming-soon">Скоро</span>
+            </button>
+          </div>
         </div>
       </div>
     </nav>
 
+    <div id="overlay" class="overlay" aria-hidden="true"></div>
+
     <main class="main-container">
       <div id="main-page" class="page active">
-        <section class="hero">
-          <div class="hero-content">
-            <h1 class="hero-title">Преобразуй текст в <strong>речь</strong></h1>
-            <p class="hero-subtitle">Sonexa — спокойный, быстрый и визуально чистый сервис синтеза речи. Минимум шума, максимум фокуса на результате.</p>
+        <section class="welcome-shell">
+          <div class="welcome-card">
+            <div class="welcome-eyebrow">AI Voice Studio</div>
+            <h1 class="welcome-title">Добро пожаловать в <strong>Sonexa</strong></h1>
+            <p class="welcome-subtitle">
+              Пиши текст, выбирай голос и получай речь без лишнего шума. Никакого чата — только чистый интерфейс и быстрый TTS.
+            </p>
 
-            <div class="hero-pills">
+            <div class="welcome-actions">
+              <button class="btn btn-primary" data-tab-jump="tts" type="button">
+                <span class="icon icon-sm" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="4" />
+                    <path d="M7 9h10" />
+                    <path d="M7 13h6" />
+                  </svg>
+                </span>
+                <span>Открыть TTS</span>
+              </button>
+              <button class="btn btn-secondary" data-page-jump="about" type="button">
+                <span class="icon icon-sm" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 11v5" />
+                    <path d="M12 8h.01" />
+                  </svg>
+                </span>
+                <span>О проекте</span>
+              </button>
+            </div>
+
+            <div class="welcome-pills">
               <span class="hero-pill">Натуральные голоса</span>
               <span class="hero-pill">Быстрая генерация</span>
+              <span class="hero-pill">Приватный поток</span>
             </div>
           </div>
         </section>
 
         <div class="tab-container">
           <div class="tabs">
-            <button class="tab-btn active" data-tab="tts">
+            <button class="tab-btn active" data-tab="tts" type="button">
               <span class="tab-icon icon icon-sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="4" width="18" height="16" rx="4" />
@@ -76,9 +140,9 @@
                   <path d="M7 13h6" />
                 </svg>
               </span>
-              <span>Текст в речь</span>
+              <span>TTS</span>
             </button>
-            <button class="tab-btn disabled" data-tab="stt">
+            <button class="tab-btn disabled" data-tab="stt" type="button" disabled>
               <span class="tab-icon icon icon-sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
@@ -86,7 +150,7 @@
                   <path d="M12 18v4" />
                 </svg>
               </span>
-              <span>Речь в текст</span>
+              <span>STT</span>
               <span class="coming-soon">Скоро</span>
             </button>
           </div>
@@ -127,7 +191,7 @@
                 </select>
               </div>
 
-              <button id="generate" class="btn btn-primary btn-large">
+              <button id="generate" class="btn btn-primary btn-large" type="button">
                 <span class="icon icon-sm" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 3v18" />
@@ -162,7 +226,7 @@
                     </span>
                     Результат
                   </h3>
-                  <button id="clear-btn" class="btn-icon-only" title="Закрыть плеер" aria-label="Закрыть плеер">
+                  <button id="clear-btn" class="btn-icon-only" title="Закрыть плеер" aria-label="Закрыть плеер" type="button">
                     <span class="icon icon-sm" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 6 6 18" />
@@ -173,7 +237,7 @@
                 </div>
                 <audio id="audio" controls class="audio-player"></audio>
                 <div class="player-actions">
-                  <button id="download-btn" class="btn btn-secondary">
+                  <button id="download-btn" class="btn btn-secondary" type="button">
                     <span class="icon icon-sm" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 3v12" />
@@ -183,7 +247,7 @@
                     </span>
                     Скачать
                   </button>
-                  <button id="copy-url-btn" class="btn btn-secondary">
+                  <button id="copy-url-btn" class="btn btn-secondary" type="button">
                     <span class="icon icon-sm" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="9" y="9" width="11" height="11" rx="2" />
@@ -248,29 +312,25 @@
       <div id="about-page" class="page">
         <section class="about-section">
           <h1 class="about-title">О Sonexa</h1>
-
           <div class="about-content">
             <div class="about-card">
               <h2>История проекта</h2>
               <p>Sonexa родился из простой идеи: сделать синтез речи доступным, быстрым и качественным. Проект создавался одним разработчиком без бюджета, используя только открытые исходные коды, ИИ-модели и упорство.</p>
               <p>Начинаясь как экспериментальный проект, Sonexa быстро эволюционировал в полнофункциональный сервис синтеза речи. Каждый улучшение, каждая оптимизация — результат самоотверженной работы и вера в возможность создать что-то полезное для людей.</p>
             </div>
-
             <div class="about-card">
               <h2>Sonexa Inc.</h2>
               <p>Сегодня Sonexa — это неофициальная компания (пока что), основанная на базе успешного проекта - ElevenLabs. Несмотря на скромные начальные ресурсы, мы доказали, что качественный продукт может появиться благодаря страсти к коду и инновациям.</p>
               <p>Наша миссия: дать каждому доступ к передовым технологиям синтеза речи. Будь то контент-мейкер, разработчик или просто человек, которому нужна естественная озвучка — Sonexa здесь для тебя.</p>
             </div>
-
             <div class="about-card">
               <h2>Сделано в России 🇷🇺</h2>
               <p>Sonexa развивается в России и для России. Мы гордимся тем, что создаем передовые технологии, которые конкурируют с мировыми аналогами. Наша команда верит, что инновация не требует огромных инвестиций — она требует идей, знаний и готовности работать.</p>
               <p>Спасибо за то, что используешь Sonexa. Твоя поддержка вдохновляет нас на дальнейшее развитие!</p>
             </div>
           </div>
-
           <div class="about-actions">
-            <button class="nav-link nav-btn" data-page="main" style="margin-top: 28px;">
+            <button class="nav-link nav-btn" data-page="main" type="button" style="margin-top: 28px;">
               <span class="icon icon-sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m15 18-6-6 6-6" />
@@ -286,18 +346,6 @@
     <footer class="footer">
       <div class="footer-content">
         <p>&copy; 2026 Sonexa Inc. Создано с ❤️ в России.</p>
-        <div class="footer-links">
-          <a href="#" onclick="document.querySelector('[data-page=about]').click()">
-            <span class="icon icon-sm" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 11v5" />
-                <path d="M12 8h.01" />
-              </svg>
-            </span>
-            <span>О проекте</span>
-          </a>
-        </div>
       </div>
     </footer>
   </div>
