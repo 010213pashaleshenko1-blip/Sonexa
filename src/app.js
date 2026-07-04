@@ -1,4 +1,3 @@
-// DOM элементы
 const generateBtn = document.getElementById('generate');
 const textInput = document.getElementById('text');
 const voiceSelect = document.getElementById('voice');
@@ -9,6 +8,10 @@ const audioElement = document.getElementById('audio');
 const downloadBtn = document.getElementById('download-btn');
 const copyUrlBtn = document.getElementById('copy-url-btn');
 const clearBtn = document.getElementById('clear-btn');
+
+const menuToggle = document.getElementById('menu-toggle');
+const navDrawer = document.getElementById('nav-drawer');
+const overlay = document.getElementById('overlay');
 
 const ICONS = {
   idle: `
@@ -51,7 +54,7 @@ function escapeHTML(value) {
 }
 
 function setStatus(type, title, message) {
-  const status = statusSection.querySelector('.status');
+  const status = statusSection?.querySelector('.status');
   if (!status) return;
 
   status.className = `status ${type}`;
@@ -72,15 +75,44 @@ function updateCharCount() {
   }
 }
 
+function closeMenu() {
+  if (!navDrawer || !overlay || !menuToggle) return;
+
+  navDrawer.classList.remove('open');
+  overlay.classList.remove('open');
+  navDrawer.setAttribute('aria-hidden', 'true');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+}
+
+function openMenu() {
+  if (!navDrawer || !overlay || !menuToggle) return;
+
+  navDrawer.classList.add('open');
+  overlay.classList.add('open');
+  navDrawer.setAttribute('aria-hidden', 'false');
+  menuToggle.setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
+}
+
+function toggleMenu() {
+  if (navDrawer?.classList.contains('open')) {
+    closeMenu();
+  } else {
+    openMenu();
+  }
+}
+
 function setPage(page) {
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   const nextPage = document.getElementById(`${page}-page`);
   if (nextPage) nextPage.classList.add('active');
 
-  document.querySelectorAll('.nav-btn').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.page === page);
+  document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.page === page && !btn.dataset.tab);
   });
 
+  closeMenu();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -95,6 +127,15 @@ function setActiveTab(tab) {
 
   const activePanel = document.getElementById(`${tab}-panel`);
   if (activePanel) activePanel.style.display = 'block';
+
+  document.querySelectorAll('.nav-btn[data-tab]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.tab === tab);
+  });
+}
+
+function openMainTab(tab) {
+  setPage('main');
+  setActiveTab(tab);
 }
 
 function safeJSONParse(text) {
@@ -105,36 +146,78 @@ function safeJSONParse(text) {
   }
 }
 
-// Переключение страниц
+// Drawer controls
+menuToggle?.addEventListener('click', toggleMenu);
+overlay?.addEventListener('click', closeMenu);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMenu();
+});
+
+// Navigation
 document.querySelectorAll('.nav-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
+    if (btn.disabled || btn.classList.contains('is-disabled')) return;
+
     const page = btn.dataset.page;
+    const tab = btn.dataset.tab;
+
+    if (page && tab) {
+      openMainTab(tab);
+      return;
+    }
+
+    if (page) {
+      setPage(page);
+      return;
+    }
+
+    if (tab) {
+      openMainTab(tab);
+    }
+  });
+});
+
+// Welcome-window shortcuts
+const pageJumpButtons = document.querySelectorAll('[data-page-jump]');
+pageJumpButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.pageJump;
     if (!page) return;
     setPage(page);
   });
 });
 
-// Переключение вкладок TTS/STT
+const tabJumpButtons = document.querySelectorAll('[data-tab-jump]');
+tabJumpButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tabJump;
+    if (!tab) return;
+    openMainTab(tab);
+  });
+});
+
+// TTS/STT tabs
 document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     if (btn.classList.contains('disabled')) return;
     const tab = btn.dataset.tab;
     if (!tab) return;
-    setActiveTab(tab);
+    openMainTab(tab);
   });
 });
 
-// Счётчик символов
-textInput.addEventListener('input', updateCharCount);
+// Input state
+textInput?.addEventListener('input', updateCharCount);
 updateCharCount();
 
-// Инициализация статуса
+// Initial state
 setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
 setPage('main');
 setActiveTab('tts');
+closeMenu();
 
-// Кнопка генерирования речи
-generateBtn.addEventListener('click', async () => {
+// Generate speech
+generateBtn?.addEventListener('click', async () => {
   const text = textInput.value.trim();
   const voice = voiceSelect.value;
 
@@ -173,7 +256,7 @@ generateBtn.addEventListener('click', async () => {
     try {
       await audioElement.play();
     } catch {
-      // Автовоспроизведение может быть заблокировано браузером — это окей.
+      // Autoplay can be blocked by the browser. That's fine.
     }
 
     setStatus('success', 'Готово!', 'Твоя речь создана и готова к прослушиванию');
@@ -184,8 +267,8 @@ generateBtn.addEventListener('click', async () => {
   }
 });
 
-// Кнопка скачивания
-downloadBtn.addEventListener('click', () => {
+// Download audio
+downloadBtn?.addEventListener('click', () => {
   if (!audioElement.src) return;
 
   const link = document.createElement('a');
@@ -196,8 +279,8 @@ downloadBtn.addEventListener('click', () => {
   link.remove();
 });
 
-// Кнопка копирования ссылки
-copyUrlBtn.addEventListener('click', async () => {
+// Copy URL
+copyUrlBtn?.addEventListener('click', async () => {
   if (!audioElement.src) return;
 
   const originalHTML = copyUrlBtn.innerHTML;
@@ -213,8 +296,8 @@ copyUrlBtn.addEventListener('click', async () => {
   }
 });
 
-// Кнопка очистки
-clearBtn.addEventListener('click', () => {
+// Clear player
+clearBtn?.addEventListener('click', () => {
   textInput.value = '';
   updateCharCount();
   audioElement.src = '';
@@ -224,8 +307,8 @@ clearBtn.addEventListener('click', () => {
   textInput.focus();
 });
 
-// Горячая клавиша: Ctrl+Enter для отправки
-textInput.addEventListener('keydown', (e) => {
+// Ctrl+Enter send
+textInput?.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
     e.preventDefault();
     generateBtn.click();
