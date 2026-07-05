@@ -18,11 +18,66 @@ const appContainer = document.getElementById('app-container');
 const appBody = document.getElementById('app-body');
 
 const MOBILE_BREAKPOINT = 768;
+const THEME_STORAGE_KEY = 'sonexa-theme';
 
 const DEFAULT_STATUS = {
   title: 'Готово',
   message: 'Введи текст и нажми кнопку, чтобы создать речь',
 };
+
+/* ---------------------------------------------------------------------------
+   Theme management
+   --------------------------------------------------------------------------- */
+function getStoredTheme() {
+  return localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+
+  if (theme === 'system') {
+    root.removeAttribute('data-theme');
+  } else {
+    root.setAttribute('data-theme', theme);
+  }
+
+  // Update meta theme-color
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', isDark ? '#151515' : '#FAFAF8');
+  }
+
+  // Update active button
+  document.querySelectorAll('.theme-btn[data-theme-value]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.themeValue === theme);
+  });
+}
+
+function setTheme(theme) {
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  applyTheme(theme);
+}
+
+// Apply saved theme immediately (before paint to avoid flash)
+(function initTheme() {
+  const saved = getStoredTheme();
+  applyTheme(saved);
+})();
+
+// Listen for system theme changes when in "system" mode
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (getStoredTheme() === 'system') {
+    applyTheme('system');
+  }
+});
+
+// Theme button listeners
+document.querySelectorAll('.theme-btn[data-theme-value]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    setTheme(btn.dataset.themeValue);
+  });
+});
 
 function escapeHTML(value) {
   return String(value)
