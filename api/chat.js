@@ -3,7 +3,7 @@
  *
  * Endpoint:
  *   POST /api/chat
- *     { messages: [{role, content}], temperature?: 0.7, max_tokens?: 1024 }
+ *     { messages: [{role, content}] }
  *     → text/event-stream
  *       data: {"status":"started"}
  *       data: {"status":"chunk","content":"накопленный текст"}
@@ -11,18 +11,22 @@
  *       data: {"status":"done","content":"полный текст"}
  *
  * Backend: приватный HF Space Cartik/Sonexa-AQ-Server (Gradio API)
- *   1. POST {BASE}/gradio_api/call/predict  → { event_id }   (с Authorization: Bearer HF_TOKEN)
- *   2. GET  {BASE}/gradio_api/call/predict/{event_id}  → SSE stream
- *      event: complete
- *      data: [full_response_text]
+ * URL: https://cartik-sonexa-aq-server.hf.space
  *
- * Токен HF_TOKEN берётся из process.env (Vercel Environment Variables).
- * URL Space берётся из process.env.HF_CHAT_SPACE_URL или дефолтный.
+ * Стратегия:
+ *   1. POST {BASE}/gradio_api/call/predict  (с Authorization: Bearer HF_TOKEN)
+ *      body: { data: [prompt_string] }
+ *      → { event_id }
+ *   2. GET {BASE}/gradio_api/call/predict/{event_id}  (с Authorization)
+ *      → SSE stream, ждём event: complete
+ *      data: [response_text]
+ *
+ * Fallback paths: пробуем /gradio_api/call/predict → /call/predict → /api/predict
+ * (разные версии Gradio используют разные пути)
  */
 
 const HF_TOKEN = process.env.HF_TOKEN || "";
-// Приватный Space Cartik/Sonexa-AQ-Server
-const BASE = process.env.HF_CHAT_SPACE_URL || "https://cartik-sonexa-aq-server.hf.space";
+const BASE = "https://cartik-sonexa-aq-server.hf.space";
 
 const SYSTEM_PROMPT = `Ты — Sonexa Assistant, дружелюбный ИИ-помощник в одноимённом приложении для синтеза речи (TTS).
 
@@ -40,13 +44,16 @@ const SYSTEM_PROMPT = `Ты — Sonexa Assistant, дружелюбный ИИ-п
 - Если просят сгенерировать текст для озвучки — предлагай варианты
 - Используй эмодзи умеренно (1-2 на сообщение, не больше)`;
 
-/**
- * Форматируем messages в единую строку для Gradio predict.
- * Gradio API на этом Space принимает data: [message_string].
- */
+function authHeaders(extra = {}) {
+  const h = { "Content-Type": "application/json", ...extra };
+  if (HF_TOKEN) {
+    h["Authorization"] = `Bearer ${HF_TOKEN}`;
+  }
+  return h;
+}
+
 function buildPromptFromMessages(messages) {
   const lines = [];
-  // System prompt добавляем первым
   lines.push(`[SYSTEM] ${SYSTEM_PROMPT}`);
   for (const m of messages) {
     if (m.role === "user") {
@@ -60,124 +67,162 @@ function buildPromptFromMessages(messages) {
 }
 
 /**
- * Шлёт POST на Gradio API для создания задачи.
- * Возвращает event_id.
+ * Пробуем разные варианты Gradio API paths.
+ * Возвращаем [eventId, usedPath].
  */
 async function createGradioTask(prompt) {
-  const url = `${BASE}/gradio_api/call/predict`;
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  if (HF_TOKEN) {
-    headers["Authorization"] = `Bearer ${HF_TOKEN}`;
-  }
+  const candidates = [
+    "/gradio_api/call/predict",
+    "/call/predict",
+    "/api/predict",
+    "/run/predict",
+  ];
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      data: [prompt],
-    }),
-  });
+  let lastErr = null;
 
-  if (!res.ok) {
-    const text = await res.text();
-    let msg = `Gradio API error ${res.status}`;
+  for (const path of candidates) {
+    const url = `${BASE}${path}`;
     try {
-      const j = JSON.parse(text);
-      if (j.error) msg += `: ${j.error}`;
-    } catch {
-      if (text) msg += `: ${text.slice(0, 300)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ data: [prompt] }),
+      });
+
+      if (res.status === 404) {
+        // Этот path не существует — пробуем следующий
+        continue;
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        lastErr = new Error(`${path} → HTTP ${res.status}: ${text.slice(0, 200)}`);
+        continue;
+      }
+
+      const data = await res.json();
+      if (!data.event_id) {
+        lastErr = new Error(`${path} → нет event_id в ответе: ${JSON.stringify(data).slice(0, 200)}`);
+        continue;
+      }
+
+      return { eventId: data.event_id, path };
+    } catch (e) {
+      lastErr = new Error(`${path} → ${e.message}`);
     }
-    throw new Error(msg);
   }
 
-  const data = await res.json();
-  if (!data.event_id) {
-    throw new Error("Gradio API не вернул event_id");
-  }
-  return data.event_id;
+  throw new Error(
+    `Ни один Gradio endpoint не сработал. Последняя ошибка: ${lastErr?.message || "unknown"}`
+  );
 }
 
 /**
  * Читает SSE-стрим Gradio и ждёт событие complete.
- * Парсит data: [...] и возвращает распакованный текст.
+ * Пробуем path по умолчанию + варианты.
  */
-async function waitForGradioResult(eventId, onChunk) {
-  const url = `${BASE}/gradio_api/call/predict/${eventId}`;
-  const headers = {};
-  if (HF_TOKEN) {
-    headers["Authorization"] = `Bearer ${HF_TOKEN}`;
-  }
+async function waitForGradioResult(eventId, usedPath) {
+  // Строим варианты stream URLs на основе использованного POST path
+  const streamPaths = [
+    `${usedPath}/${eventId}`,
+    `/gradio_api/call/predict/${eventId}`,
+    `/call/predict/${eventId}`,
+  ];
+  // Убираем дубликаты
+  const uniquePaths = [...new Set(streamPaths)];
 
-  const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Gradio stream error ${res.status}: ${text.slice(0, 200)}`);
-  }
+  let lastErr = null;
 
-  // Читаем SSE поток
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let result = null;
-  let error = null;
+  for (const path of uniquePaths) {
+    const url = `${BASE}${path}`;
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: authHeaders({ "Content-Type": undefined }),
+      });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+      if (res.status === 404) continue;
 
-    buffer += decoder.decode(value, { stream: true });
-    // SSE события разделены двойным переносом строки
-    const blocks = buffer.split("\n\n");
-    buffer = blocks.pop() || ""; // последний неполный блок
-
-    for (const block of blocks) {
-      const eventMatch = block.match(/^event:\s*(.+)$/m);
-      const dataMatch = block.match(/^data:\s*(.+)$/m);
-      if (!eventMatch || !dataMatch) continue;
-
-      const event = eventMatch[1].trim();
-      const dataStr = dataMatch[1].trim();
-
-      if (event === "error") {
-        error = dataStr;
-        break;
+      if (!res.ok) {
+        const text = await res.text();
+        lastErr = new Error(`${path} → HTTP ${res.status}: ${text.slice(0, 200)}`);
+        continue;
       }
-      if (event === "complete") {
-        try {
-          const payload = JSON.parse(dataStr);
-          // Gradio возвращает data: [response] — массив
-          if (Array.isArray(payload) && payload.length > 0) {
-            result = payload[0];
-          } else {
-            result = String(payload);
+
+      // Читаем SSE поток
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let result = null;
+      let error = null;
+      let gotAnyEvent = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
+
+        for (const block of blocks) {
+          gotAnyEvent = true;
+          const eventMatch = block.match(/^event:\s*(.+)$/m);
+          const dataMatch = block.match(/^data:\s*(.+)$/m);
+
+          if (eventMatch && eventMatch[1].trim() === "error") {
+            error = dataMatch ? dataMatch[1].trim() : "unknown error";
+            break;
           }
-        } catch {
-          result = dataStr;
+          if (eventMatch && eventMatch[1].trim() === "complete") {
+            if (!dataMatch) {
+              result = "";
+            } else {
+              try {
+                const payload = JSON.parse(dataMatch[1].trim());
+                if (Array.isArray(payload) && payload.length > 0) {
+                  result = payload[0];
+                } else {
+                  result = String(payload);
+                }
+              } catch {
+                result = dataMatch[1].trim();
+              }
+            }
+            break;
+          }
         }
-        break;
+        if (error || result !== null) break;
       }
-      // Промежуточные события (generating, etc.) — игнорируем
+
+      if (!gotAnyEvent) {
+        // Поток пустой — пробуем следующий path
+        lastErr = new Error(`${path} → пустой SSE поток`);
+        continue;
+      }
+
+      if (error) throw new Error(`Gradio error: ${error}`);
+      if (result === null) {
+        lastErr = new Error(`${path} → нет события complete`);
+        continue;
+      }
+      return result;
+    } catch (e) {
+      lastErr = e;
     }
-    if (error || result !== null) break;
   }
 
-  if (error) throw new Error(`Gradio error: ${error}`);
-  if (result === null) throw new Error("Gradio не вернул результат (timeout?)");
-  return result;
+  throw new Error(
+    `Не удалось получить результат Gradio. Последняя ошибка: ${lastErr?.message || "unknown"}`
+  );
 }
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
-
+  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -191,13 +236,6 @@ export default async function handler(req, res) {
   const { messages } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "messages array required" });
-  }
-
-  const valid = messages.every(
-    m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string"
-  );
-  if (!valid) {
-    return res.status(400).json({ error: "each message must have {role, content}" });
   }
 
   // SSE headers
@@ -214,22 +252,17 @@ export default async function handler(req, res) {
   try {
     send({ status: "started", model: "sonexa" });
 
-    // 1. Создаём задачу в Gradio
     const prompt = buildPromptFromMessages(messages);
-    const eventId = await createGradioTask(prompt);
-
-    // 2. Ждём результат через SSE
-    const fullText = await waitForGradioResult(eventId);
+    const { eventId, path: usedPath } = await createGradioTask(prompt);
+    const fullText = await waitForGradioResult(eventId, usedPath);
 
     if (!fullText || !fullText.trim()) {
       throw new Error("Модель вернула пустой ответ");
     }
 
-    // 3. Эмуляция стриминга для UX: разбиваем на слова, отправляем поэтапно
-    //    (Gradio отдаёт весь ответ одним куском в complete-событии)
+    // Эмуляция стриминга для UX
     const tokens = fullText.split(/(\s+)/);
     let accumulated = "";
-
     for (let i = 0; i < tokens.length; i++) {
       accumulated += tokens[i];
       send({ status: "chunk", content: accumulated });
