@@ -11,6 +11,7 @@ const clearBtn = document.getElementById('clear-btn');
 
 const menuToggle = document.getElementById('menu-toggle');
 const navDrawer = document.getElementById('nav-drawer');
+const navbar = document.getElementById('navbar');
 const overlay = document.getElementById('overlay');
 
 const DEFAULT_STATUS = {
@@ -36,27 +37,27 @@ function safeJSONParse(text) {
 }
 
 function closeMenu() {
-  if (!navDrawer || !overlay || !menuToggle) return;
+  if (!navbar || !overlay || !menuToggle) return;
 
-  navDrawer.classList.remove('open');
+  navbar.classList.remove('open');
   overlay.classList.remove('open');
-  navDrawer.setAttribute('aria-hidden', 'true');
+  navDrawer?.setAttribute('aria-hidden', 'true');
   menuToggle.setAttribute('aria-expanded', 'false');
   document.body.style.overflow = '';
 }
 
 function openMenu() {
-  if (!navDrawer || !overlay || !menuToggle) return;
+  if (!navbar || !overlay || !menuToggle) return;
 
-  navDrawer.classList.add('open');
+  navbar.classList.add('open');
   overlay.classList.add('open');
-  navDrawer.setAttribute('aria-hidden', 'false');
+  navDrawer?.setAttribute('aria-hidden', 'false');
   menuToggle.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
 }
 
 function toggleMenu() {
-  if (navDrawer?.classList.contains('open')) {
+  if (navbar?.classList.contains('open')) {
     closeMenu();
   } else {
     openMenu();
@@ -68,10 +69,10 @@ function setStatus(type, title, message) {
   if (!status) return;
 
   const icons = {
-    idle: '✓',
-    busy: '⏳',
-    success: '✓',
-    error: '✕',
+    idle: '&#10003;',
+    busy: '&#9203;',
+    success: '&#10003;',
+    error: '&#10005;',
   };
 
   status.className = `status ${type}`;
@@ -96,109 +97,44 @@ function updateNavState(page) {
   });
 }
 
+/* ---------------------------------------------------------------------------
+   Welcome page — subtle, elegant animations (light theme)
+   --------------------------------------------------------------------------- */
 function injectHomeAnimations() {
   if (document.getElementById('sonexa-home-animations')) return;
 
   const style = document.createElement('style');
   style.id = 'sonexa-home-animations';
   style.textContent = `
-    .welcome-card {
-      position: relative;
-      overflow: hidden;
-      isolation: isolate;
-    }
-
-    .welcome-orb-cloud {
-      position: relative;
-      z-index: 0;
-      height: clamp(96px, 13vw, 156px);
-      margin: -2px 0 8px;
-      pointer-events: none;
-      overflow: visible;
-    }
-
-    .welcome-orb-cloud .orb {
-      position: absolute;
-      border-radius: 999px;
-      filter: blur(14px);
-      transform-origin: center;
-      animation: sonexa-orb-drift 9s ease-in-out infinite;
-    }
-
-    .welcome-orb-cloud .orb-a {
-      width: clamp(82px, 9vw, 130px);
-      height: clamp(82px, 9vw, 130px);
-      left: 16%;
-      top: 8%;
-      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.10), rgba(245, 158, 11, 0.00) 60%), radial-gradient(circle, rgba(245, 158, 11, 0.20), rgba(245, 158, 11, 0.00) 72%);
-      animation-delay: -1.5s;
-    }
-
-    .welcome-orb-cloud .orb-b {
-      width: clamp(126px, 14vw, 210px);
-      height: clamp(126px, 14vw, 210px);
-      left: 50%;
-      top: -6%;
-      transform: translateX(-50%);
-      background: radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.00) 58%), radial-gradient(circle, rgba(217, 119, 6, 0.18), rgba(217, 119, 6, 0.00) 72%);
-      animation-duration: 11s;
-    }
-
-    .welcome-orb-cloud .orb-c {
-      width: clamp(90px, 10vw, 150px);
-      height: clamp(90px, 10vw, 150px);
-      right: 14%;
-      top: 10%;
-      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.09), rgba(245, 158, 11, 0.00) 60%), radial-gradient(circle, rgba(255, 179, 71, 0.22), rgba(255, 179, 71, 0.00) 72%);
-      animation-delay: -3s;
-      animation-duration: 10s;
-    }
-
-    .welcome-orb-cloud .orb-glow {
-      inset: 0;
-      background: radial-gradient(ellipse at center top, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.00) 66%);
-      filter: blur(22px);
-      opacity: 0.95;
-      animation: sonexa-glow-breathe 8s ease-in-out infinite;
-    }
-
-    .welcome-greeting {
-      background: linear-gradient(135deg, rgba(217, 119, 6, 0.22), rgba(255, 255, 255, 0.08));
-      color: #f8d08a;
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset, 0 14px 30px rgba(0, 0, 0, 0.18);
-    }
-
+    /* Entrance — gentle fade-up */
     .welcome-copy > *,
     .welcome-spoilers > * {
       opacity: 0;
-      transform: translateY(14px) scale(0.99);
-      animation: sonexa-rise-in 720ms cubic-bezier(0.2, 0, 0, 1) forwards;
+      transform: translateY(10px);
+      animation: sonexa-rise-in 500ms cubic-bezier(0.2, 0, 0, 1) forwards;
     }
 
-    .welcome-copy > *:nth-child(1) { animation-delay: 60ms; }
-    .welcome-copy > *:nth-child(2) { animation-delay: 140ms; }
-    .welcome-copy > *:nth-child(3) { animation-delay: 220ms; }
-    .welcome-copy > *:nth-child(4) { animation-delay: 300ms; }
+    .welcome-copy > *:nth-child(1) { animation-delay: 40ms; }
+    .welcome-copy > *:nth-child(2) { animation-delay: 100ms; }
+    .welcome-copy > *:nth-child(3) { animation-delay: 160ms; }
+    .welcome-copy > *:nth-child(4) { animation-delay: 220ms; }
+    .welcome-copy > *:nth-child(5) { animation-delay: 280ms; }
 
-    .welcome-spoilers > *:nth-child(1) { animation-delay: 460ms; }
-    .welcome-spoilers > *:nth-child(2) { animation-delay: 540ms; }
-    .welcome-spoilers > *:nth-child(3) { animation-delay: 620ms; }
+    .welcome-spoilers > *:nth-child(1) { animation-delay: 360ms; }
+    .welcome-spoilers > *:nth-child(2) { animation-delay: 420ms; }
+    .welcome-spoilers > *:nth-child(3) { animation-delay: 480ms; }
 
+    /* Hover micro-interactions */
     .hero-pill,
     .welcome-actions .btn,
-    .spoiler-card,
-    .welcome-orb-cloud .orb {
-      transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
-    }
-
-    .welcome-orb-cloud:hover .orb {
-      transform: translateY(-2px) scale(1.02);
+    .spoiler-card {
+      transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
     }
 
     .spoiler-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.14);
-      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-md);
     }
 
     .hero-pill:hover,
@@ -206,6 +142,7 @@ function injectHomeAnimations() {
       transform: translateY(-1px);
     }
 
+    /* Accent underline on Sonexa brand */
     .welcome-title strong {
       position: relative;
       display: inline-block;
@@ -216,41 +153,35 @@ function injectHomeAnimations() {
       position: absolute;
       left: 0;
       right: 0;
-      bottom: 6px;
-      height: 10px;
+      bottom: 2px;
+      height: 6px;
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(245, 158, 11, 0.0), rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.0));
+      background: linear-gradient(90deg, rgba(204, 120, 50, 0.0), rgba(204, 120, 50, 0.18), rgba(204, 120, 50, 0.0));
       z-index: -1;
-      filter: blur(8px);
-      animation: sonexa-highlight-pulse 3.8s ease-in-out infinite;
+      animation: sonexa-highlight-breathe 4s ease-in-out infinite;
+    }
+
+    /* Dynamic greeting badge */
+    .welcome-greeting {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 4px 14px;
     }
 
     @keyframes sonexa-rise-in {
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes sonexa-highlight-pulse {
-      0%, 100% { opacity: 0.55; transform: scaleX(0.96); }
-      50% { opacity: 1; transform: scaleX(1.03); }
-    }
-
-    @keyframes sonexa-orb-drift {
-      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-      50% { transform: translate3d(0, -10px, 0) scale(1.05); }
-    }
-
-    @keyframes sonexa-glow-breathe {
-      0%, 100% { opacity: 0.72; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.04); }
+    @keyframes sonexa-highlight-breathe {
+      0%, 100% { opacity: 0.6; transform: scaleX(0.96); }
+      50% { opacity: 1; transform: scaleX(1.02); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .welcome-card::before,
-      .welcome-card::after,
       .welcome-copy > *,
       .welcome-spoilers > *,
-      .welcome-title strong::after,
-      .welcome-orb-cloud .orb {
+      .welcome-title strong::after {
         animation: none !important;
       }
 
@@ -262,23 +193,6 @@ function injectHomeAnimations() {
     }
   `;
   document.head.appendChild(style);
-}
-
-function setupWelcomeOrbCloud() {
-  const welcomeCard = document.querySelector('.welcome-card');
-  if (!welcomeCard || welcomeCard.querySelector('.welcome-orb-cloud')) return;
-
-  const cloud = document.createElement('div');
-  cloud.className = 'welcome-orb-cloud';
-  cloud.setAttribute('aria-hidden', 'true');
-  cloud.innerHTML = `
-    <span class="orb orb-a"></span>
-    <span class="orb orb-b"></span>
-    <span class="orb orb-c"></span>
-    <span class="orb orb-glow"></span>
-  `;
-
-  welcomeCard.insertBefore(cloud, welcomeCard.firstChild);
 }
 
 function patchShellNavigation() {
@@ -418,7 +332,6 @@ document.querySelectorAll('[data-page-jump]').forEach((btn) => {
 });
 
 injectHomeAnimations();
-setupWelcomeOrbCloud();
 patchShellNavigation();
 setDynamicGreeting();
 
@@ -428,7 +341,7 @@ if (document.querySelector('.page')) {
   showPage(initialPage, { pushState: false });
 }
 
-// TTS form logic (runs on the same shell only if TTS elements exist)
+// TTS form logic
 if (textInput && generateBtn && voiceSelect) {
   updateCharCount();
   setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
@@ -507,7 +420,7 @@ if (textInput && generateBtn && voiceSelect) {
 
     try {
       await navigator.clipboard.writeText(audioElement.src);
-      copyUrlBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">✓</span>Скопировано!';
+      copyUrlBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">&#10003;</span> Скопировано!';
       setTimeout(() => {
         copyUrlBtn.innerHTML = originalHTML;
       }, 1800);

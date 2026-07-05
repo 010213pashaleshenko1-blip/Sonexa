@@ -1,6 +1,27 @@
+/* ==========================================================================
+   Sonexa — Navigation overrides (Claude.ai-inspired light theme)
+   ========================================================================== */
+
+/* Sidebar navigation links — compact, clean */
 .nav-links {
   width: min(100%, 420px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Active nav indicator */
+.nav-link.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+.nav-link.is-active {
+  position: relative;
 }
 
 @media (max-width: 760px) {
