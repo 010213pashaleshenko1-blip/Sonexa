@@ -9,7 +9,6 @@ const downloadBtn = document.getElementById('download-btn');
 const copyUrlBtn = document.getElementById('copy-url-btn');
 const clearBtn = document.getElementById('clear-btn');
 
-const menuToggle = document.getElementById('menu-toggle');
 const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
 const navDrawer = document.getElementById('nav-drawer');
 const navbar = document.getElementById('navbar');
@@ -38,33 +37,29 @@ function safeJSONParse(text) {
 }
 
 function closeMenu() {
-  if (!navbar || !overlay || !menuToggle) return;
+  if (!navbar || !overlay) return;
 
   navbar.classList.remove('open');
   overlay.classList.remove('open');
   navDrawer?.setAttribute('aria-hidden', 'true');
-  menuToggle.setAttribute('aria-expanded', 'false');
   mobileMenuToggle?.setAttribute('aria-expanded', 'false');
   document.body.style.overflow = '';
 
-  // Hide overlay after transition
   setTimeout(() => {
     if (!overlay.classList.contains('open')) {
       overlay.classList.remove('visible');
     }
-  }, 260);
+  }, 300);
 }
 
 function openMenu() {
-  if (!navbar || !overlay || !menuToggle) return;
+  if (!navbar || !overlay) return;
 
   overlay.classList.add('visible');
-  // Force reflow before adding 'open' for transition
   void overlay.offsetWidth;
   navbar.classList.add('open');
   overlay.classList.add('open');
   navDrawer?.setAttribute('aria-hidden', 'false');
-  menuToggle.setAttribute('aria-expanded', 'true');
   mobileMenuToggle?.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
 }
@@ -111,7 +106,7 @@ function updateNavState(page) {
 }
 
 /* ---------------------------------------------------------------------------
-   Welcome page — subtle, elegant animations (light theme)
+   Welcome page — subtle, elegant animations
    --------------------------------------------------------------------------- */
 function injectHomeAnimations() {
   if (document.getElementById('sonexa-home-animations')) return;
@@ -119,7 +114,6 @@ function injectHomeAnimations() {
   const style = document.createElement('style');
   style.id = 'sonexa-home-animations';
   style.textContent = `
-    /* Entrance — gentle fade-up */
     .welcome-copy > *,
     .welcome-spoilers > * {
       opacity: 0;
@@ -137,7 +131,6 @@ function injectHomeAnimations() {
     .welcome-spoilers > *:nth-child(2) { animation-delay: 420ms; }
     .welcome-spoilers > *:nth-child(3) { animation-delay: 480ms; }
 
-    /* Hover micro-interactions (desktop only) */
     @media (hover: hover) {
       .hero-pill,
       .welcome-actions .btn,
@@ -157,7 +150,6 @@ function injectHomeAnimations() {
       }
     }
 
-    /* Accent underline on Sonexa brand */
     .welcome-title strong {
       position: relative;
       display: inline-block;
@@ -171,12 +163,11 @@ function injectHomeAnimations() {
       bottom: 2px;
       height: 6px;
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(204, 120, 50, 0.0), rgba(204, 120, 50, 0.18), rgba(204, 120, 50, 0.0));
+      background: linear-gradient(90deg, var(--accent-soft), var(--accent-glow), var(--accent-soft));
       z-index: -1;
       animation: sonexa-highlight-breathe 4s ease-in-out infinite;
     }
 
-    /* Dynamic greeting badge */
     .welcome-greeting {
       background: var(--accent-soft);
       color: var(--accent);
@@ -268,18 +259,6 @@ function patchShellNavigation() {
     }
   });
 
-  const metricBlocks = document.querySelectorAll('.metric-block');
-  metricBlocks.forEach((block) => {
-    const strong = block.querySelector('strong');
-    const span = block.querySelector('span');
-    if (strong && strong.textContent.trim() === 'STT') {
-      strong.textContent = 'ASR';
-      if (span && /скоро/i.test(span.textContent)) {
-        span.textContent = 'скоро будет';
-      }
-    }
-  });
-
   document.querySelectorAll('.spoiler-card summary').forEach((summary) => {
     if (summary.textContent.includes('STT')) {
       summary.textContent = summary.textContent.replace('STT', 'ASR');
@@ -324,15 +303,14 @@ function showPage(page, { pushState = true } = {}) {
   return true;
 }
 
-// Drawer controls — both desktop and mobile hamburger
-menuToggle?.addEventListener('click', toggleMenu);
+// Drawer controls
 mobileMenuToggle?.addEventListener('click', toggleMenu);
 overlay?.addEventListener('click', closeMenu);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeMenu();
 });
 
-// Close menu on swipe left (touch gesture)
+// Swipe left to close
 let touchStartX = 0;
 let touchStartY = 0;
 document.addEventListener('touchstart', (e) => {
@@ -342,13 +320,12 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchend', (e) => {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-  // Swipe left to close (only if horizontal swipe > vertical)
   if (dx < -60 && dy < 40 && navbar?.classList.contains('open')) {
     closeMenu();
   }
 }, { passive: true });
 
-// Navigation buttons and links
+// Navigation
 document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
@@ -367,7 +344,6 @@ injectHomeAnimations();
 patchShellNavigation();
 setDynamicGreeting();
 
-// If the page is loaded with ?page=tts or ?page=about
 const initialPage = new URL(window.location.href).searchParams.get('page') || 'main';
 if (document.querySelector('.page')) {
   showPage(initialPage, { pushState: false });
@@ -423,7 +399,7 @@ if (textInput && generateBtn && voiceSelect) {
       try {
         await audioElement?.play();
       } catch {
-        // Autoplay can be blocked by the browser. That's fine.
+        // Autoplay blocked
       }
 
       setStatus('success', 'Готово!', 'Твоя речь создана и готова к прослушиванию');
@@ -436,7 +412,6 @@ if (textInput && generateBtn && voiceSelect) {
 
   downloadBtn?.addEventListener('click', () => {
     if (!audioElement?.src) return;
-
     const link = document.createElement('a');
     link.href = audioElement.src;
     link.download = `sonexa-speech-${Date.now()}.mp3`;
@@ -447,15 +422,11 @@ if (textInput && generateBtn && voiceSelect) {
 
   copyUrlBtn?.addEventListener('click', async () => {
     if (!audioElement?.src) return;
-
     const originalHTML = copyUrlBtn.innerHTML;
-
     try {
       await navigator.clipboard.writeText(audioElement.src);
       copyUrlBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">&#10003;</span> Скопировано!';
-      setTimeout(() => {
-        copyUrlBtn.innerHTML = originalHTML;
-      }, 1800);
+      setTimeout(() => { copyUrlBtn.innerHTML = originalHTML; }, 1800);
     } catch {
       setStatus('error', 'Ошибка', 'Не удалось скопировать ссылку');
     }

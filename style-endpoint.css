@@ -1,18 +1,15 @@
 /* ==========================================================================
-   Sonexa — TTS & About page styles (Claude.ai-inspired light theme)
-   Fully mobile-optimized
+   Sonexa — TTS & About page styles
+   System-aware dark/light theme, mobile-optimized
    ========================================================================== */
 
-/* ----------------------------- Service / TTS page ----------------------------- */
 .service-shell {
   max-width: 920px;
   margin: 0 auto;
   padding: 40px 0 48px;
 }
 
-.service-head {
-  margin-bottom: 28px;
-}
+.service-head { margin-bottom: 28px; }
 
 .service-kicker {
   font-size: 12px;
@@ -57,10 +54,7 @@
   color: var(--text-secondary);
   transition: var(--transition);
 }
-.service-step:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
-}
+.service-step:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
 
 .service-step strong {
   display: grid;
@@ -84,7 +78,7 @@
   white-space: nowrap;
 }
 
-/* ----------------------------- Panel ----------------------------- */
+/* Panel */
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -99,61 +93,18 @@
   align-items: start;
 }
 
-.column,
-.form-group {
-  min-width: 0;
-}
+.column, .form-group { min-width: 0; }
+.text-input, .voice-select, .btn-large { width: 100%; min-width: 0; }
+.text-input { min-height: 220px; resize: vertical; }
+.player-section { overflow: hidden; }
+.audio-player { width: 100%; max-width: 100%; }
+.player-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
-.text-input,
-.voice-select,
-.btn-large {
-  width: 100%;
-  min-width: 0;
-}
-
-.text-input {
-  min-height: 220px;
-  resize: vertical;
-}
-
-.player-section {
-  overflow: hidden;
-}
-
-.audio-player {
-  width: 100%;
-  max-width: 100%;
-}
-
-.player-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-/* ----------------------------- About page extras ----------------------------- */
-.about-section {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 48px 0;
-}
-
-.about-header {
-  margin-bottom: 32px;
-}
-
-.about-intro {
-  max-width: 620px;
-  color: var(--text-secondary);
-  font-size: 16px;
-  line-height: 1.7;
-}
-
-.about-content {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
+/* About */
+.about-section { max-width: 860px; margin: 0 auto; padding: 48px 0; }
+.about-header { margin-bottom: 32px; }
+.about-intro { max-width: 620px; color: var(--text-secondary); font-size: 16px; line-height: 1.7; }
+.about-content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 
 .about-card {
   background: var(--surface);
@@ -162,124 +113,42 @@
   padding: 24px;
   transition: var(--transition);
 }
-.about-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-2px);
-}
+.about-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-2px); }
+.about-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.02em; }
+.about-card p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); }
 
-.about-card h2 {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 10px;
-  letter-spacing: -0.02em;
-}
-
-.about-card p {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-}
-
-/* ==========================================================================
-   RESPONSIVE — Tablet
-   ========================================================================== */
+/* Responsive — Tablet */
 @media (min-width: 1100px) {
-  .service-shell {
-    padding-top: 56px;
-  }
+  .service-shell { padding-top: 56px; }
 }
 
 @media (max-width: 1024px) {
-  .about-content {
-    grid-template-columns: 1fr;
-  }
-
-  .panel-grid {
-    grid-template-columns: 1fr;
-  }
+  .about-content { grid-template-columns: 1fr; }
+  .panel-grid { grid-template-columns: 1fr; }
 }
 
-/* ==========================================================================
-   RESPONSIVE — Mobile
-   ========================================================================== */
+/* Responsive — Mobile */
 @media (max-width: 768px) {
-  .service-shell {
-    padding: 24px 0 36px;
-  }
+  .service-shell { padding: 24px 0 36px; }
+  .service-head { margin-bottom: 20px; }
+  .service-kicker { font-size: 11px; }
+  .service-title { font-size: clamp(1.5rem, 6vw, 2rem); margin-bottom: 8px; }
+  .service-subtitle { font-size: 14px; }
 
-  .service-head {
-    margin-bottom: 20px;
-  }
+  .service-steps { grid-template-columns: 1fr; gap: 8px; margin-bottom: 20px; }
+  .service-step { padding: 12px 14px; }
 
-  .service-kicker {
-    font-size: 11px;
-  }
+  .panel { padding: 16px; border-radius: var(--radius-lg); }
+  .panel-grid { gap: 16px; }
+  .text-input { min-height: 140px; font-size: 16px; }
 
-  .service-title {
-    font-size: clamp(1.5rem, 6vw, 2rem);
-    margin-bottom: 8px;
-  }
+  .player-section { border-radius: var(--radius-md); padding: 16px; }
+  .player-actions { grid-template-columns: 1fr; }
 
-  .service-subtitle {
-    font-size: 14px;
-  }
-
-  .service-steps {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-
-  .service-step {
-    padding: 12px 14px;
-  }
-
-  .panel {
-    padding: 16px;
-    border-radius: var(--radius-lg);
-  }
-
-  .panel-grid {
-    gap: 16px;
-  }
-
-  .text-input {
-    min-height: 140px;
-    font-size: 16px; /* Prevents iOS zoom */
-  }
-
-  .player-section {
-    border-radius: var(--radius-md);
-    padding: 16px;
-  }
-
-  .player-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .about-section {
-    padding: 24px 0;
-  }
-
-  .about-header {
-    margin-bottom: 20px;
-  }
-
-  .about-title {
-    font-size: 1.6rem;
-  }
-
-  .about-intro {
-    font-size: 15px;
-  }
-
-  .about-content {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .about-card {
-    padding: 18px;
-  }
+  .about-section { padding: 24px 0; }
+  .about-header { margin-bottom: 20px; }
+  .about-title { font-size: 1.6rem; }
+  .about-intro { font-size: 15px; }
+  .about-content { grid-template-columns: 1fr; gap: 12px; }
+  .about-card { padding: 18px; }
 }
