@@ -96,6 +96,89 @@ function updateNavState(page) {
   });
 }
 
+function patchShellNavigation() {
+  if (!navDrawer) return;
+
+  const groups = Array.from(navDrawer.querySelectorAll('.nav-group'));
+  if (groups.length < 2) return;
+
+  const pagesGroup = groups[0];
+  const servicesGroup = groups[1];
+  const ttsButton = navDrawer.querySelector('.nav-link.nav-btn[data-page="tts"]');
+
+  if (ttsButton && ttsButton.parentElement !== servicesGroup) {
+    servicesGroup.insertBefore(ttsButton, servicesGroup.querySelector('.nav-link.is-disabled') || null);
+  }
+
+  const disabledButtons = Array.from(servicesGroup.querySelectorAll('.nav-link.is-disabled'));
+
+  const asrButton = disabledButtons.find((btn) => btn.textContent.includes('STT') || btn.textContent.includes('ASR'));
+  if (asrButton) {
+    const label = Array.from(asrButton.children).find(
+      (el) => el.tagName === 'SPAN' && !el.classList.contains('icon') && !el.classList.contains('coming-soon')
+    );
+    if (label) label.textContent = 'ASR';
+  }
+
+  let musicButton = servicesGroup.querySelector('[data-service="music-ai"]');
+  if (!musicButton) {
+    musicButton = document.createElement('button');
+    musicButton.type = 'button';
+    musicButton.disabled = true;
+    musicButton.className = 'nav-link nav-btn is-disabled';
+    musicButton.dataset.service = 'music-ai';
+    musicButton.innerHTML = `
+      <span class="icon icon-sm" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v16" />
+          <path d="M8 8c2-3 6-3 8 0" />
+          <path d="M8 16c2 3 6 3 8 0" />
+        </svg>
+      </span>
+      <span>Music AI Generation</span>
+      <span class="coming-soon">Скоро</span>
+    `;
+  }
+
+  const asrCurrent = servicesGroup.querySelector('.nav-link.is-disabled span:not(.icon):not(.coming-soon)');
+  if (asrCurrent && asrCurrent.textContent !== 'ASR') {
+    asrCurrent.textContent = 'ASR';
+  }
+
+  const musicExisting = Array.from(servicesGroup.querySelectorAll('.nav-link.is-disabled')).find(
+    (btn) => btn.textContent.includes('Music AI Generation')
+  );
+  if (!musicExisting) {
+    const reference = asrButton || null;
+    servicesGroup.insertBefore(musicButton, reference);
+  }
+
+  Array.from(pagesGroup.querySelectorAll('.nav-link')).forEach((btn) => {
+    if (btn.dataset.page === 'tts') {
+      btn.remove();
+    }
+  });
+
+  const metricBlocks = document.querySelectorAll('.metric-block');
+  metricBlocks.forEach((block) => {
+    const strong = block.querySelector('strong');
+    if (!strong) return;
+    if (strong.textContent.trim() === 'STT') {
+      strong.textContent = 'ASR';
+      const span = block.querySelector('span');
+      if (span && /скоро/i.test(span.textContent)) {
+        span.textContent = 'скоро будет';
+      }
+    }
+  });
+
+  document.querySelectorAll('.spoiler-card summary').forEach((summary) => {
+    if (summary.textContent.includes('STT')) {
+      summary.textContent = summary.textContent.replace('STT', 'ASR');
+    }
+  });
+}
+
 function showPage(page, { pushState = true } = {}) {
   const target = document.getElementById(`${page}-page`);
   const pages = document.querySelectorAll('.page');
@@ -123,10 +206,6 @@ function showPage(page, { pushState = true } = {}) {
   return true;
 }
 
-function openTTSPage() {
-  showPage('tts');
-}
-
 // Drawer controls
 menuToggle?.addEventListener('click', toggleMenu);
 overlay?.addEventListener('click', closeMenu);
@@ -148,6 +227,8 @@ document.querySelectorAll('[data-page-jump]').forEach((btn) => {
     if (page) showPage(page);
   });
 });
+
+patchShellNavigation();
 
 // If the page is loaded with ?page=tts or ?page=about
 const initialPage = new URL(window.location.href).searchParams.get('page') || 'main';
