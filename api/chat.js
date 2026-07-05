@@ -69,6 +69,7 @@ function buildPromptFromMessages(messages) {
 /**
  * Пробуем разные варианты Gradio API paths.
  * Возвращаем [eventId, usedPath].
+ * Собирает все попытки для диагностики.
  */
 async function createGradioTask(prompt) {
   const candidates = [
@@ -78,6 +79,7 @@ async function createGradioTask(prompt) {
     "/run/predict",
   ];
 
+  const attempts = [];
   let lastErr = null;
 
   for (const path of candidates) {
@@ -89,31 +91,41 @@ async function createGradioTask(prompt) {
         body: JSON.stringify({ data: [prompt] }),
       });
 
+      const text = await res.text();
+      attempts.push(`${path} → ${res.status}`);
+
       if (res.status === 404) {
         // Этот path не существует — пробуем следующий
         continue;
       }
 
       if (!res.ok) {
-        const text = await res.text();
         lastErr = new Error(`${path} → HTTP ${res.status}: ${text.slice(0, 200)}`);
         continue;
       }
 
-      const data = await res.json();
-      if (!data.event_id) {
-        lastErr = new Error(`${path} → нет event_id в ответе: ${JSON.stringify(data).slice(0, 200)}`);
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        lastErr = new Error(`${path} → невалидный JSON: ${text.slice(0, 200)}`);
         continue;
       }
 
-      return { eventId: data.event_id, path };
+      if (!data.event_id) {
+        lastErr = new Error(`${path} → нет event_id: ${JSON.stringify(data).slice(0, 200)}`);
+        continue;
+      }
+
+      return { eventId: data.event_id, path, attempts };
     } catch (e) {
+      attempts.push(`${path} → exception: ${e.message}`);
       lastErr = new Error(`${path} → ${e.message}`);
     }
   }
 
   throw new Error(
-    `Ни один Gradio endpoint не сработал. Последняя ошибка: ${lastErr?.message || "unknown"}`
+    `Ни один Gradio endpoint не сработал. Попытки: ${attempts.join(" | ")}. Последняя ошибка: ${lastErr?.message || "unknown"}`
   );
 }
 
