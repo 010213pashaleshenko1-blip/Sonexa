@@ -67,20 +67,61 @@ function buildPromptFromMessages(messages) {
 }
 
 /**
+ * Получаем конфиг Gradio Space — там указаны все доступные API endpoints
+ * и их fn_index. Это помогает понять, какой endpoint использовать.
+ */
+async function getGradioConfig() {
+  const configPaths = ["/config", "/gradio_api/config"];
+  for (const path of configPaths) {
+    try {
+      const res = await fetch(`${BASE}${path}`, {
+        method: "GET",
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { path, data };
+      }
+    } catch {}
+  }
+  return null;
+}
+
+/**
  * Пробуем разные варианты Gradio API paths.
- * Возвращаем [eventId, usedPath].
- * Собирает все попытки для диагностики.
+ * Сначала пытаемся получить /config и прочитать имена endpoints оттуда.
  */
 async function createGradioTask(prompt) {
-  const candidates = [
+  // Сначала пробуем получить config и найти имя endpoint'а
+  const config = await getGradioConfig();
+  let candidates = [
     "/gradio_api/call/predict",
     "/call/predict",
     "/api/predict",
     "/run/predict",
   ];
 
+  if (config?.data) {
+    // Gradio config содержит dependencies с api_name
+    const cfg = config.data;
+    if (cfg.dependencies) {
+      const apiNames = cfg.dependencies
+        .filter((d) => d && d.api_name)
+        .map((d) => d.api_name);
+      // Добавляем пути вида /gradio_api/call/{api_name}, /call/{api_name}
+      for (const name of apiNames) {
+        candidates.unshift(`/gradio_api/call${name}`);
+        candidates.unshift(`/call${name}`);
+      }
+    }
+  }
+
+  // Убираем дубликаты
+  candidates = [...new Set(candidates)];
+
   const attempts = [];
   let lastErr = null;
+  let configInfo = config ? `config path: ${config.path}` : "config: not found";
 
   for (const path of candidates) {
     const url = `${BASE}${path}`;
@@ -94,10 +135,7 @@ async function createGradioTask(prompt) {
       const text = await res.text();
       attempts.push(`${path} → ${res.status}`);
 
-      if (res.status === 404) {
-        // Этот path не существует — пробуем следующий
-        continue;
-      }
+      if (res.status === 404) continue;
 
       if (!res.ok) {
         lastErr = new Error(`${path} → HTTP ${res.status}: ${text.slice(0, 200)}`);
@@ -125,7 +163,7 @@ async function createGradioTask(prompt) {
   }
 
   throw new Error(
-    `Ни один Gradio endpoint не сработал. Попытки: ${attempts.join(" | ")}. Последняя ошибка: ${lastErr?.message || "unknown"}`
+    `Ни один Gradio endpoint не сработал. ${configInfo}. Попытки: ${attempts.join(" | ")}. Последняя ошибка: ${lastErr?.message || "unknown"}`
   );
 }
 
