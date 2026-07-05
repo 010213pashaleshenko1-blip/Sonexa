@@ -79,6 +79,47 @@ document.querySelectorAll('.theme-btn[data-theme-value]').forEach((btn) => {
   });
 });
 
+/* ---------------------------------------------------------------------------
+   Quick theme toggle (top bar) — cycles dark → light → system
+   --------------------------------------------------------------------------- */
+const quickThemeBtn = document.getElementById('quick-theme-toggle');
+const THEME_CYCLE = ['dark', 'light', 'system'];
+
+const QUICK_THEME_ICONS = {
+  dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
+  system: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><path d="M8 21h8M12 17v4"/></svg>',
+};
+
+const THEME_LABELS = {
+  dark: 'Тёмная',
+  light: 'Светлая',
+  system: 'Системная',
+};
+
+function updateQuickThemeIcon() {
+  if (!quickThemeBtn) return;
+  const current = getStoredTheme();
+  const wrap = quickThemeBtn.querySelector('.icon');
+  if (wrap) wrap.innerHTML = QUICK_THEME_ICONS[current] || QUICK_THEME_ICONS.dark;
+  quickThemeBtn.setAttribute('aria-label', `Тема: ${THEME_LABELS[current]}. Переключить.`);
+  quickThemeBtn.title = `Тема: ${THEME_LABELS[current]}`;
+}
+
+if (quickThemeBtn) {
+  quickThemeBtn.addEventListener('click', () => {
+    const current = getStoredTheme();
+    const idx = THEME_CYCLE.indexOf(current);
+    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+    setTheme(next);
+    updateQuickThemeIcon();
+  });
+  updateQuickThemeIcon();
+}
+
+// Keep quick icon in sync when system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateQuickThemeIcon);
+
 function escapeHTML(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -180,6 +221,24 @@ function setStatus(type, title, message) {
 function updateCharCount() {
   if (charCount && textInput) {
     charCount.textContent = String(textInput.value.length);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Char progress bar (visual indicator for 0/2000 limit)
+   --------------------------------------------------------------------------- */
+const charProgressBar = document.getElementById('char-progress-bar');
+const MAX_CHARS = 2000;
+
+function updateCharProgress() {
+  if (!textInput || !charCount) return;
+  const len = textInput.value.length;
+  charCount.textContent = String(len);
+  if (charProgressBar) {
+    const pct = Math.min(100, (len / MAX_CHARS) * 100);
+    charProgressBar.style.width = pct + '%';
+    charProgressBar.classList.toggle('is-warning', len >= MAX_CHARS * 0.9 && len < MAX_CHARS);
+    charProgressBar.classList.toggle('is-danger', len >= MAX_CHARS);
   }
 }
 
@@ -425,6 +484,67 @@ document.querySelectorAll('[data-page-jump]').forEach((btn) => {
   });
 });
 
+// Footer navigation links (data-page attribute on .footer-link--btn)
+document.querySelectorAll('.footer-link--btn[data-page]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
+    if (page) showPage(page);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+   Voice card grid — sync with hidden select
+   --------------------------------------------------------------------------- */
+const voiceGrid = document.getElementById('voice-grid');
+
+function selectVoice(value) {
+  if (!voiceSelect || !voiceGrid) return;
+  voiceSelect.value = value;
+  voiceGrid.querySelectorAll('.voice-card').forEach((card) => {
+    const isActive = card.dataset.voiceValue === value;
+    card.classList.toggle('is-active', isActive);
+    card.setAttribute('aria-checked', isActive ? 'true' : 'false');
+  });
+}
+
+if (voiceGrid && voiceSelect) {
+  voiceGrid.addEventListener('click', (e) => {
+    const card = e.target.closest('.voice-card');
+    if (!card) return;
+    selectVoice(card.dataset.voiceValue);
+  });
+
+  // Keyboard navigation: arrow keys to move between voice cards
+  voiceGrid.addEventListener('keydown', (e) => {
+    const cards = Array.from(voiceGrid.querySelectorAll('.voice-card'));
+    const currentIndex = cards.findIndex((c) => c.classList.contains('is-active'));
+    let nextIndex = currentIndex;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextIndex = (currentIndex + 1) % cards.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextIndex = (currentIndex - 1 + cards.length) % cards.length;
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cards[currentIndex]?.click(); return; }
+    else return;
+    e.preventDefault();
+    cards[nextIndex]?.focus();
+    selectVoice(cards[nextIndex].dataset.voiceValue);
+  });
+
+  // Make voice cards focusable for keyboard
+  voiceGrid.querySelectorAll('.voice-card').forEach((card) => {
+    card.setAttribute('tabindex', card.classList.contains('is-active') ? '0' : '-1');
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   Player waveform — animate when audio plays, pause when not
+   --------------------------------------------------------------------------- */
+const waveformEl = document.getElementById('player-waveform');
+if (audioElement && waveformEl) {
+  audioElement.addEventListener('play', () => waveformEl.classList.add('is-playing'));
+  audioElement.addEventListener('pause', () => waveformEl.classList.remove('is-playing'));
+  audioElement.addEventListener('ended', () => waveformEl.classList.remove('is-playing'));
+  audioElement.addEventListener('emptied', () => waveformEl.classList.remove('is-playing'));
+}
+
 injectHomeAnimations();
 patchShellNavigation();
 setDynamicGreeting();
@@ -436,10 +556,10 @@ if (document.querySelector('.page')) {
 
 // TTS form logic
 if (textInput && generateBtn && voiceSelect) {
-  updateCharCount();
+  updateCharProgress();
   setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
 
-  textInput.addEventListener('input', updateCharCount);
+  textInput.addEventListener('input', updateCharProgress);
 
   generateBtn.addEventListener('click', async () => {
     const text = textInput.value.trim();
@@ -519,9 +639,10 @@ if (textInput && generateBtn && voiceSelect) {
 
   clearBtn?.addEventListener('click', () => {
     textInput.value = '';
-    updateCharCount();
+    updateCharProgress();
     if (audioElement) audioElement.src = '';
     if (playerSection) playerSection.style.display = 'none';
+    if (waveformEl) waveformEl.classList.remove('is-playing');
     setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
     generateBtn.disabled = false;
     textInput.focus();
