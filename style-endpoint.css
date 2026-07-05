@@ -1,5 +1,6 @@
 /* ==========================================================================
    Sonexa — TTS & About page styles (Claude.ai-inspired light theme)
+   Fully mobile-optimized
    ========================================================================== */
 
 /* ----------------------------- Service / TTS page ----------------------------- */
@@ -180,7 +181,9 @@
   color: var(--text-secondary);
 }
 
-/* ----------------------------- Responsive ----------------------------- */
+/* ==========================================================================
+   RESPONSIVE — Tablet
+   ========================================================================== */
 @media (min-width: 1100px) {
   .service-shell {
     padding-top: 56px;
@@ -197,13 +200,35 @@
   }
 }
 
-@media (max-width: 760px) {
+/* ==========================================================================
+   RESPONSIVE — Mobile
+   ========================================================================== */
+@media (max-width: 768px) {
   .service-shell {
-    padding: 28px 0 36px;
+    padding: 24px 0 36px;
+  }
+
+  .service-head {
+    margin-bottom: 20px;
+  }
+
+  .service-kicker {
+    font-size: 11px;
+  }
+
+  .service-title {
+    font-size: clamp(1.5rem, 6vw, 2rem);
+    margin-bottom: 8px;
+  }
+
+  .service-subtitle {
+    font-size: 14px;
   }
 
   .service-steps {
     grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
   }
 
   .service-step {
@@ -211,27 +236,50 @@
   }
 
   .panel {
-    padding: 20px;
+    padding: 16px;
     border-radius: var(--radius-lg);
   }
 
   .panel-grid {
-    gap: 20px;
+    gap: 16px;
   }
 
   .text-input {
-    min-height: 160px;
+    min-height: 140px;
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  .player-section {
+    border-radius: var(--radius-md);
+    padding: 16px;
   }
 
   .player-actions {
     grid-template-columns: 1fr;
   }
 
+  .about-section {
+    padding: 24px 0;
+  }
+
+  .about-header {
+    margin-bottom: 20px;
+  }
+
+  .about-title {
+    font-size: 1.6rem;
+  }
+
+  .about-intro {
+    font-size: 15px;
+  }
+
   .about-content {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .about-card {
-    padding: 20px;
+    padding: 18px;
   }
 }

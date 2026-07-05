@@ -10,6 +10,7 @@ const copyUrlBtn = document.getElementById('copy-url-btn');
 const clearBtn = document.getElementById('clear-btn');
 
 const menuToggle = document.getElementById('menu-toggle');
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
 const navDrawer = document.getElementById('nav-drawer');
 const navbar = document.getElementById('navbar');
 const overlay = document.getElementById('overlay');
@@ -43,16 +44,28 @@ function closeMenu() {
   overlay.classList.remove('open');
   navDrawer?.setAttribute('aria-hidden', 'true');
   menuToggle.setAttribute('aria-expanded', 'false');
+  mobileMenuToggle?.setAttribute('aria-expanded', 'false');
   document.body.style.overflow = '';
+
+  // Hide overlay after transition
+  setTimeout(() => {
+    if (!overlay.classList.contains('open')) {
+      overlay.classList.remove('visible');
+    }
+  }, 260);
 }
 
 function openMenu() {
   if (!navbar || !overlay || !menuToggle) return;
 
+  overlay.classList.add('visible');
+  // Force reflow before adding 'open' for transition
+  void overlay.offsetWidth;
   navbar.classList.add('open');
   overlay.classList.add('open');
   navDrawer?.setAttribute('aria-hidden', 'false');
   menuToggle.setAttribute('aria-expanded', 'true');
+  mobileMenuToggle?.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
 }
 
@@ -124,22 +137,24 @@ function injectHomeAnimations() {
     .welcome-spoilers > *:nth-child(2) { animation-delay: 420ms; }
     .welcome-spoilers > *:nth-child(3) { animation-delay: 480ms; }
 
-    /* Hover micro-interactions */
-    .hero-pill,
-    .welcome-actions .btn,
-    .spoiler-card {
-      transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
-    }
+    /* Hover micro-interactions (desktop only) */
+    @media (hover: hover) {
+      .hero-pill,
+      .welcome-actions .btn,
+      .spoiler-card {
+        transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+      }
 
-    .spoiler-card:hover {
-      transform: translateY(-1px);
-      border-color: var(--border-strong);
-      box-shadow: var(--shadow-md);
-    }
+      .spoiler-card:hover {
+        transform: translateY(-1px);
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-md);
+      }
 
-    .hero-pill:hover,
-    .welcome-actions .btn:hover {
-      transform: translateY(-1px);
+      .hero-pill:hover,
+      .welcome-actions .btn:hover {
+        transform: translateY(-1px);
+      }
     }
 
     /* Accent underline on Sonexa brand */
@@ -309,12 +324,29 @@ function showPage(page, { pushState = true } = {}) {
   return true;
 }
 
-// Drawer controls
+// Drawer controls — both desktop and mobile hamburger
 menuToggle?.addEventListener('click', toggleMenu);
+mobileMenuToggle?.addEventListener('click', toggleMenu);
 overlay?.addEventListener('click', closeMenu);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeMenu();
 });
+
+// Close menu on swipe left (touch gesture)
+let touchStartX = 0;
+let touchStartY = 0;
+document.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', (e) => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+  // Swipe left to close (only if horizontal swipe > vertical)
+  if (dx < -60 && dy < 40 && navbar?.classList.contains('open')) {
+    closeMenu();
+  }
+}, { passive: true });
 
 // Navigation buttons and links
 document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {

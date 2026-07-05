@@ -1,7 +1,6 @@
 /* ==========================================================================
    Sonexa — AI Voice Studio
-   Claude.ai-inspired warm light theme
-   Clean, elegant, premium aesthetic
+   Claude.ai-inspired warm light theme — fully mobile-optimized
    ========================================================================== */
 
 :root {
@@ -50,6 +49,12 @@
 
   --sidebar-w:  260px;
   --header-h:   56px;
+
+  /* Safe area for notch phones */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
 }
 
 /* ----------------------------- Reset ----------------------------- */
@@ -74,6 +79,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 a {
@@ -93,6 +99,7 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 img, svg {
@@ -105,6 +112,11 @@ img, svg {
   display: flex;
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+/* ----------------------------- Mobile Header ----------------------------- */
+.mobile-header {
+  display: none;
 }
 
 /* ----------------------------- Sidebar / Navbar ----------------------------- */
@@ -128,6 +140,7 @@ img, svg {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .navbar-top {
@@ -136,25 +149,6 @@ img, svg {
   justify-content: space-between;
   padding: 16px 16px 12px;
   flex-shrink: 0;
-}
-
-.menu-toggle {
-  display: none;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  transition: var(--transition);
-}
-.menu-toggle span {
-  display: block;
-  width: 18px;
-  height: 2px;
-  background: var(--text-secondary);
-  border-radius: 2px;
-  transition: var(--transition);
 }
 
 .logo-section {
@@ -207,10 +201,7 @@ img, svg {
   flex: 1;
   padding: 4px 12px 20px;
   overflow-y: auto;
-}
-
-.nav-drawer.open {
-  /* mobile only — handled by JS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .nav-group {
@@ -238,6 +229,7 @@ img, svg {
   color: var(--text-secondary);
   transition: var(--transition);
   text-align: left;
+  min-height: 44px; /* Touch target */
 }
 
 .nav-link:hover {
@@ -277,11 +269,15 @@ img, svg {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.20);
   z-index: 90;
   opacity: 0;
-  transition: opacity 200ms ease;
-  backdrop-filter: blur(2px);
+  transition: opacity 250ms ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.overlay.visible {
+  display: block;
 }
 .overlay.open {
   opacity: 1;
@@ -340,7 +336,7 @@ img, svg {
 }
 
 .welcome-title {
-  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.15;
@@ -372,7 +368,7 @@ img, svg {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -385,11 +381,6 @@ img, svg {
   padding: 6px 14px;
   border-radius: 999px;
   transition: var(--transition);
-}
-.hero-pill:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-  transform: translateY(-1px);
 }
 
 .welcome-spoilers {
@@ -410,11 +401,6 @@ img, svg {
   transition: var(--transition);
   cursor: pointer;
 }
-.spoiler-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
 .spoiler-card summary {
   font-weight: 600;
   font-size: 14px;
@@ -423,6 +409,7 @@ img, svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 44px; /* Touch target */
 }
 .spoiler-card summary::after {
   content: "+";
@@ -432,7 +419,7 @@ img, svg {
   transition: var(--transition);
 }
 .spoiler-card[open] summary::after {
-  content: "−";
+  content: "\2212";
 }
 .spoiler-card p {
   margin-top: 10px;
@@ -454,6 +441,8 @@ img, svg {
   transition: var(--transition);
   white-space: nowrap;
   border: 1px solid transparent;
+  min-height: 44px; /* Touch target */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary {
@@ -471,6 +460,12 @@ img, svg {
   transform: translateY(0);
   box-shadow: none;
 }
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 
 .btn-secondary {
   background: var(--surface);
@@ -482,6 +477,9 @@ img, svg {
   border-color: var(--border-strong);
   transform: translateY(-1px);
 }
+.btn-secondary:active {
+  transform: translateY(0);
+}
 
 .btn-large {
   padding: 14px 28px;
@@ -490,8 +488,8 @@ img, svg {
 }
 
 .btn-icon-only {
-  width: 36px;
-  height: 36px;
+  width: 44px;  /* Touch target */
+  height: 44px; /* Touch target */
   border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
@@ -537,11 +535,12 @@ img, svg {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
   background: var(--surface);
-  font-size: 15px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
   line-height: 1.6;
   color: var(--text-primary);
   resize: vertical;
   transition: var(--transition);
+  -webkit-appearance: none;
 }
 .text-input::placeholder {
   color: var(--text-tertiary);
@@ -558,15 +557,17 @@ img, svg {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
   background: var(--surface);
-  font-size: 14px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
   color: var(--text-primary);
   cursor: pointer;
   transition: var(--transition);
   appearance: none;
+  -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23746D65' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   padding-right: 40px;
+  min-height: 48px; /* Touch target */
 }
 .voice-select:focus {
   outline: none;
@@ -665,6 +666,7 @@ img, svg {
   border-radius: var(--radius-sm);
   margin-bottom: 14px;
   outline: none;
+  min-height: 44px;
 }
 
 .player-actions {
@@ -735,7 +737,6 @@ img, svg {
   font-weight: 700;
   margin-bottom: 10px;
   letter-spacing: -0.02em;
-  color: var(--text-primary);
 }
 
 .about-card p {
@@ -746,73 +747,6 @@ img, svg {
 
 .about-actions {
   margin-top: 32px;
-}
-
-/* ----------------------------- Responsive ----------------------------- */
-@media (max-width: 1024px) {
-  .about-content {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 760px) {
-  :root {
-    --sidebar-w: 0px;
-  }
-
-  .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 280px;
-    height: 100vh;
-    height: 100dvh;
-    transform: translateX(-100%);
-    z-index: 200;
-    box-shadow: var(--shadow-xl);
-  }
-  .navbar.open {
-    transform: translateX(0);
-  }
-
-  .menu-toggle {
-    display: flex;
-  }
-
-  .overlay {
-    display: block;
-  }
-  .overlay.open {
-    display: block;
-  }
-
-  .main-container {
-    margin-left: 0;
-  }
-
-  .footer {
-    margin-left: 0;
-  }
-
-  .page {
-    padding: 0 16px;
-  }
-
-  .welcome-card {
-    padding: 28px 0;
-  }
-
-  .welcome-title {
-    font-size: clamp(1.6rem, 6vw, 2.2rem);
-  }
-
-  .about-content {
-    grid-template-columns: 1fr;
-  }
-
-  .player-actions {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ----------------------------- Scrollbar ----------------------------- */
@@ -834,4 +768,200 @@ img, svg {
 ::selection {
   background: var(--accent-soft);
   color: var(--text-primary);
+}
+
+/* ==========================================================================
+   RESPONSIVE — Tablet
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .about-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE — Mobile (< 768px)
+   Complete mobile layout with top bar, slide-out drawer, touch targets
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* --- Mobile Header --- */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-h);
+    padding: 0 12px;
+    padding-top: var(--sat);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    z-index: 80;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(250, 250, 248, 0.92);
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobile-brand .logo-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+  .mobile-brand .logo-mark svg {
+    width: 16px;
+    height: 16px;
+  }
+  .mobile-brand .logo {
+    font-size: 16px;
+  }
+
+  .mobile-hamburger {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-hamburger:active {
+    background: var(--surface-hover);
+  }
+  .mobile-hamburger span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--text-secondary);
+    border-radius: 2px;
+    transition: var(--transition);
+  }
+
+  .mobile-header-spacer {
+    width: 44px;
+  }
+
+  /* --- Sidebar becomes drawer --- */
+  .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    height: 100dvh;
+    transform: translateX(-100%);
+    z-index: 200;
+    box-shadow: none;
+    transition: transform 300ms cubic-bezier(0.2, 0, 0, 1), box-shadow 300ms ease;
+  }
+  .navbar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Hide desktop-only elements inside navbar on mobile */
+  .menu-toggle {
+    display: none;
+  }
+
+  /* --- Main shifts down to account for mobile header --- */
+  .main-container {
+    margin-left: 0;
+    padding-top: var(--header-h);
+  }
+
+  .page {
+    padding: 0 16px;
+  }
+
+  /* --- Welcome page mobile --- */
+  .welcome-shell {
+    padding: 24px 0 32px;
+    align-items: flex-start;
+  }
+
+  .welcome-card {
+    padding: 20px 0;
+  }
+
+  .welcome-eyebrow {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .welcome-title {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+    margin-bottom: 12px;
+  }
+
+  .welcome-subtitle {
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+
+  .welcome-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .welcome-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .welcome-pills {
+    gap: 6px;
+  }
+
+  .hero-pill {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .welcome-spoilers {
+    margin-top: 24px;
+  }
+
+  .spoiler-card {
+    padding: 12px 14px;
+  }
+
+  /* --- Footer --- */
+  .footer {
+    margin-left: 0;
+    padding: 16px;
+    padding-bottom: calc(16px + var(--sab));
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE — Small phones (< 400px)
+   ========================================================================== */
+@media (max-width: 400px) {
+  .page {
+    padding: 0 12px;
+  }
+
+  .welcome-title {
+    font-size: 1.4rem;
+  }
+
+  .welcome-subtitle {
+    font-size: 14px;
+  }
+
+  .about-title {
+    font-size: 1.5rem;
+  }
 }
