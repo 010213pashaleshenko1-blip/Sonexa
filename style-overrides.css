@@ -523,3 +523,502 @@
   .welcome-stats { padding: 10px 12px; gap: 10px; }
   .stat-value { font-size: 16px; }
 }
+
+/* ==========================================================================
+   Sonexa — v1.2 Animation pack
+   Beautiful, tasteful motion across the whole interface
+   ========================================================================== */
+
+/* ——— Top bar: slide-down on load ——— */
+.top-bar {
+  animation: sonexa-slide-down 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes sonexa-slide-down {
+  from { opacity: 0; transform: translateY(-100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ——— Logo mark: animated gradient sheen ——— */
+.logo-mark {
+  position: relative;
+  overflow: hidden;
+}
+.logo-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: sonexa-logo-sheen 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sonexa-logo-sheen {
+  0%, 70% { transform: translateX(-120%); }
+  85%     { transform: translateX(120%); }
+  100%    { transform: translateX(120%); }
+}
+.top-bar-brand:hover .logo-mark::after {
+  animation-duration: 1.6s;
+}
+
+/* ——— Beta badge: subtle pulse ——— */
+.beta-badge {
+  animation: sonexa-beta-pulse 2.4s ease-in-out infinite;
+}
+@keyframes sonexa-beta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%      { box-shadow: 0 0 0 4px transparent; }
+}
+
+/* ——— Hamburger: subtle hover wobble ——— */
+.hamburger-btn:hover span {
+  background: var(--accent);
+}
+.hamburger-btn:hover span:nth-child(1) { transform: translateY(-1px); }
+.hamburger-btn:hover span:nth-child(3) { transform: translateY(1px); }
+
+/* ——— Quick theme toggle: spinning icon on click ——— */
+.quick-theme-btn.is-spinning .icon {
+  animation: sonexa-spin-once 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sonexa-spin-once {
+  from { transform: rotate(0); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ——— Welcome: floating soundwave container ——— */
+.hero-soundwave {
+  animation: sonexa-float 6s ease-in-out infinite;
+}
+@keyframes sonexa-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ——— Welcome stats: glassy entrance + counter shimmer ——— */
+.welcome-stats {
+  animation: sonexa-rise-in 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 320ms;
+  position: relative;
+  overflow: hidden;
+}
+.welcome-stats::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.08) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: sonexa-shimmer 5s ease-in-out infinite;
+  animation-delay: 1s;
+  pointer-events: none;
+}
+@keyframes sonexa-shimmer {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+.stat-value {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: transform 200ms ease;
+}
+.stat-item:hover .stat-value {
+  transform: scale(1.1);
+}
+
+/* ——— Hero pills: bounce-in + hover lift ——— */
+.hero-pill {
+  animation: sonexa-pill-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.hero-pill:nth-child(1) { animation-delay: 380ms; }
+.hero-pill:nth-child(2) { animation-delay: 460ms; }
+.hero-pill:nth-child(3) { animation-delay: 540ms; }
+@keyframes sonexa-pill-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hero-pill:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.hero-pill:hover svg {
+  transform: scale(1.15) rotate(-5deg);
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ——— Spoiler cards: smooth expand/collapse ——— */
+.spoiler-card {
+  animation: sonexa-rise-in 500ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.spoiler-card:nth-of-type(1) { animation-delay: 540ms; }
+.spoiler-card:nth-of-type(2) { animation-delay: 620ms; }
+.spoiler-card:nth-of-type(3) { animation-delay: 700ms; }
+.spoiler-card summary {
+  transition: color 200ms ease;
+}
+.spoiler-card:hover summary { color: var(--accent); }
+.spoiler-card summary::after {
+  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.spoiler-card[open] summary::after {
+  transform: rotate(180deg);
+}
+.spoiler-card p {
+  animation: sonexa-spoiler-text 360ms ease both;
+}
+@keyframes sonexa-spoiler-text {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ——— Voice cards: stagger entrance + 3D tilt hover ——— */
+.voice-card {
+  animation: sonexa-card-in 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  position: relative;
+  overflow: hidden;
+}
+.voice-card:nth-child(1) { animation-delay: 80ms; }
+.voice-card:nth-child(2) { animation-delay: 130ms; }
+.voice-card:nth-child(3) { animation-delay: 180ms; }
+.voice-card:nth-child(4) { animation-delay: 230ms; }
+.voice-card:nth-child(5) { animation-delay: 280ms; }
+.voice-card:nth-child(6) { animation-delay: 330ms; }
+.voice-card:nth-child(7) { animation-delay: 380ms; }
+.voice-card:nth-child(8) { animation-delay: 430ms; }
+.voice-card:nth-child(9) { animation-delay: 480ms; }
+@keyframes sonexa-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.voice-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%),
+              var(--accent-soft), transparent 60%);
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+.voice-card:hover::before { opacity: 1; }
+.voice-card.is-active {
+  animation: sonexa-card-pulse 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes sonexa-card-pulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%  { transform: scale(1.04); box-shadow: 0 0 0 6px transparent; }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ——— Generate button: animated gradient + loading spinner + ripple ——— */
+.btn-primary {
+  background-size: 200% 200%;
+  background-image: linear-gradient(120deg, var(--accent), var(--accent-hover), var(--accent));
+  background-position: 0% 50%;
+  animation: sonexa-btn-gradient 4s ease infinite;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes sonexa-btn-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.25) 50%, transparent 70%);
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+.btn-primary:hover::after {
+  animation: sonexa-btn-shine 800ms ease;
+}
+@keyframes sonexa-btn-shine {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+/* Ripple on click */
+.btn-primary.is-rippling {
+  animation: sonexa-btn-gradient 4s ease infinite, sonexa-btn-press 240ms ease;
+}
+@keyframes sonexa-btn-press {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+/* Loading spinner state */
+.btn-primary.is-loading .icon {
+  animation: sonexa-spin 800ms linear infinite;
+}
+.btn-primary.is-loading .btn-arrow {
+  animation: sonexa-arrow-bounce 1.2s ease-in-out infinite;
+}
+@keyframes sonexa-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes sonexa-arrow-bounce {
+  0%, 100% { transform: translateX(0); opacity: 0.85; }
+  50%      { transform: translateX(4px); opacity: 1; }
+}
+
+/* ——— Char progress bar: glowing fill at high values ——— */
+.char-progress-bar {
+  background-size: 200% 100%;
+  background-image: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 0 0 0 transparent;
+  transition: width 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              background 200ms ease,
+              box-shadow 280ms ease;
+}
+.char-progress-bar.is-warning {
+  background-image: linear-gradient(90deg, var(--warning), var(--accent));
+  box-shadow: 0 0 8px var(--warning);
+  animation: sonexa-pulse-soft 1.4s ease-in-out infinite;
+}
+.char-progress-bar.is-danger {
+  background-image: linear-gradient(90deg, var(--error), var(--warning));
+  box-shadow: 0 0 12px var(--error);
+  animation: sonexa-pulse-soft 0.9s ease-in-out infinite;
+}
+@keyframes sonexa-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+
+/* ——— Status messages: slide-in between states ——— */
+.status {
+  animation: sonexa-status-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background 200ms ease, border-color 200ms ease;
+}
+@keyframes sonexa-status-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.status.busy .status-icon {
+  animation: sonexa-spin 1200ms linear infinite;
+}
+.status.success .status-icon {
+  animation: sonexa-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.status.error .status-icon {
+  animation: sonexa-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes sonexa-pop {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+@keyframes sonexa-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+/* ——— Settings: staggered entrance + hover lift ——— */
+.settings-item {
+  animation: sonexa-rise-in 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.settings-item:nth-child(1) { animation-delay: 80ms; }
+.settings-item:nth-child(2) { animation-delay: 160ms; }
+.settings-item:nth-child(3) { animation-delay: 240ms; }
+.settings-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.settings-item-icon {
+  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.settings-item:hover .settings-item-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+/* ——— Theme buttons: pop-in active state ——— */
+.theme-btn {
+  transition: all 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.theme-btn.is-active {
+  animation: sonexa-pop 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ——— About cards: staggered entrance + hover lift ——— */
+.about-card {
+  animation: sonexa-rise-in 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.about-card:nth-child(1) { animation-delay: 80ms; }
+.about-card:nth-child(2) { animation-delay: 160ms; }
+.about-card:nth-child(3) { animation-delay: 240ms; }
+.about-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+.about-card h2 {
+  position: relative;
+  display: inline-block;
+}
+.about-card h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.about-card:hover h2::after { width: 100%; }
+
+/* ——— Sidebar: staggered nav items when opening ——— */
+.navbar.is-open .nav-link,
+.navbar.is-open .nav-group-title {
+  animation: sonexa-nav-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.navbar.is-open .nav-group-title:nth-of-type(1) { animation-delay: 60ms; }
+.navbar.is-open .nav-group:nth-child(1) .nav-link:nth-child(2) { animation-delay: 100ms; }
+.navbar.is-open .nav-group:nth-child(1) .nav-link:nth-child(3) { animation-delay: 140ms; }
+.navbar.is-open .nav-group:nth-child(1) .nav-link:nth-child(4) { animation-delay: 180ms; }
+.navbar.is-open .nav-group:nth-child(1) .nav-link:nth-child(5) { animation-delay: 220ms; }
+.navbar.is-open .nav-group:nth-child(2) .nav-group-title { animation-delay: 260ms; }
+.navbar.is-open .nav-group:nth-child(2) .nav-link:nth-child(2) { animation-delay: 300ms; }
+.navbar.is-open .nav-group:nth-child(2) .nav-link:nth-child(3) { animation-delay: 340ms; }
+@keyframes sonexa-nav-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ——— Footer: fade-up + heartbeat on heart ——— */
+.footer {
+  animation: sonexa-rise-in 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 200ms;
+}
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.footer-brand {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.footer-link--btn {
+  position: relative;
+}
+.footer-link--btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1px;
+  background: var(--accent);
+  transition: width 240ms ease;
+}
+.footer-link--btn:hover::after { width: 100%; }
+
+/* ——— Service steps: staggered entrance ——— */
+.service-step {
+  animation: sonexa-rise-in 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.service-step:nth-child(1) { animation-delay: 100ms; }
+.service-step:nth-child(2) { animation-delay: 180ms; }
+.service-step:nth-child(3) { animation-delay: 260ms; }
+.service-step strong {
+  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.service-step:hover strong {
+  transform: scale(1.15) rotate(-10deg);
+}
+
+/* ——— Coming-soon badges: shimmer ——— */
+.coming-soon {
+  position: relative;
+  overflow: hidden;
+}
+.coming-soon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: sonexa-shimmer 3s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+/* ——— Player section: reveal animation when shown ——— */
+.player-section {
+  animation: sonexa-player-reveal 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes sonexa-player-reveal {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ——— Page transition: more pronounced fade + scale ——— */
+.page.active {
+  animation: sonexa-page-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ——— Easter egg: floating heart ——— */
+.easter-egg:hover {
+  animation: sonexa-wiggle 600ms ease-in-out;
+}
+@keyframes sonexa-wiggle {
+  0%, 100% { transform: rotate(0); }
+  25%      { transform: rotate(-8deg); }
+  75%      { transform: rotate(8deg); }
+}
+
+/* ——— Reveal-on-scroll utility (used by JS IntersectionObserver) ——— */
+.sonexa-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 600ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sonexa-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   Reduced motion: disable all non-essential animations
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .hero-soundwave,
+  .welcome-stats,
+  .logo-mark::after,
+  .beta-badge,
+  .coming-soon::after,
+  .btn-primary,
+  .char-progress-bar.is-warning,
+  .char-progress-bar.is-danger {
+    animation: none !important;
+  }
+  .sonexa-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Mobile tweaks: simplify heavy animations
+   ========================================================================== */
+@media (max-width: 768px) {
+  .top-bar { animation-duration: 320ms; }
+  .voice-card { animation-duration: 320ms; }
+  .logo-mark::after { animation-duration: 6s; }
+  .welcome-stats::after { display: none; }
+}

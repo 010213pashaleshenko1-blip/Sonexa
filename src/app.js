@@ -655,3 +655,150 @@ if (textInput && generateBtn && voiceSelect) {
     }
   });
 }
+
+/* ---------------------------------------------------------------------------
+   v1.2 — Beautiful animations everywhere
+   --------------------------------------------------------------------------- */
+
+/* ——— Animated stat counters (count up from 0) ——— */
+function animateCounters() {
+  const counters = document.querySelectorAll('.stat-value');
+  counters.forEach((el) => {
+    const raw = el.textContent.trim();
+    const isNumeric = /^\d+$/.test(raw);
+    if (!isNumeric) return; // skip "MP3"
+    const target = parseInt(raw, 10);
+    if (!target) return;
+    let current = 0;
+    const duration = 900;
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      current = Math.round(target * eased);
+      el.textContent = String(current);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = String(target);
+      }
+    }
+    el.textContent = '0';
+    setTimeout(() => requestAnimationFrame(step), 380);
+  });
+}
+
+/* ——— Quick theme toggle: spin animation ——— */
+const quickThemeToggleBtn = document.getElementById('quick-theme-toggle');
+if (quickThemeToggleBtn) {
+  const originalClick = quickThemeToggleBtn.onclick;
+  quickThemeToggleBtn.addEventListener('click', () => {
+    quickThemeToggleBtn.classList.add('is-spinning');
+    setTimeout(() => quickThemeToggleBtn.classList.remove('is-spinning'), 500);
+  });
+}
+
+/* ——— Voice cards: mouse-tracking radial highlight ——— */
+document.querySelectorAll('.voice-card').forEach((card) => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    card.style.setProperty('--mx', x + '%');
+    card.style.setProperty('--my', y + '%');
+  });
+});
+
+/* ——— Generate button: loading state + ripple on click ——— */
+if (generateBtn) {
+  generateBtn.addEventListener('click', () => {
+    if (generateBtn.disabled) return;
+    generateBtn.classList.add('is-rippling');
+    setTimeout(() => generateBtn.classList.remove('is-rippling'), 280);
+  });
+}
+
+// Wrap the existing generate handler to toggle is-loading state
+const originalGenerateHandler = generateBtn?.onclick;
+if (generateBtn) {
+  // The async handler is added via addEventListener above; we augment with a
+  // mutation observer to sync is-loading with disabled state.
+  const syncLoading = new MutationObserver(() => {
+    generateBtn.classList.toggle('is-loading', generateBtn.disabled);
+  });
+  syncLoading.observe(generateBtn, { attributes: true, attributeFilter: ['disabled'] });
+}
+
+/* ——— Reveal-on-scroll for elements with .sonexa-reveal ——— */
+function setupRevealOnScroll() {
+  const revealEls = document.querySelectorAll('.sonexa-reveal');
+  if (!revealEls.length) return;
+
+  if (!('IntersectionObserver' in window)) {
+    revealEls.forEach((el) => el.classList.add('is-visible'));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+  );
+
+  revealEls.forEach((el) => observer.observe(el));
+}
+
+/* ——— Smooth <details> expand/collapse for spoiler cards ——— */
+function setupSpoilerAnimation() {
+  document.querySelectorAll('.spoiler-card').forEach((card) => {
+    const summary = card.querySelector('summary');
+    if (!summary) return;
+    summary.addEventListener('click', (e) => {
+      // Let the native toggle happen; the CSS handles the indicator animation.
+      // We just prevent default scroll jumps.
+      if (card.hasAttribute('open')) {
+        // About to close — allow native behavior
+        return;
+      }
+      // About to open — allow native behavior, CSS animates the content
+    });
+  });
+}
+
+/* ——— Init all animation helpers ——— */
+animateCounters();
+setupRevealOnScroll();
+setupSpoilerAnimation();
+
+/* ——— Re-run entrance animations when navigating to a page ——— */
+const originalShowPage = window.showPage;
+window.showPage = function (page, opts) {
+  const result = originalShowPage ? originalShowPage.call(this, page, opts) : false;
+  // Re-trigger entrance animations for the newly shown page
+  setTimeout(() => {
+    const activePage = document.querySelector('.page.active');
+    if (!activePage) return;
+    // Re-trigger card staggers and stat counters
+    if (page === 'main') {
+      animateCounters();
+    }
+    if (page === 'tts') {
+      // Re-trigger voice card entrance
+      activePage.querySelectorAll('.voice-card').forEach((card, i) => {
+        card.style.animation = 'none';
+        void card.offsetWidth;
+        card.style.animation = '';
+      });
+    }
+  }, 30);
+  return result;
+};
