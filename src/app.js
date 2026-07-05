@@ -9,10 +9,15 @@ const downloadBtn = document.getElementById('download-btn');
 const copyUrlBtn = document.getElementById('copy-url-btn');
 const clearBtn = document.getElementById('clear-btn');
 
-const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+const menuToggle = document.getElementById('menu-toggle');
+const navbarClose = document.getElementById('navbar-close');
 const navDrawer = document.getElementById('nav-drawer');
 const navbar = document.getElementById('navbar');
 const overlay = document.getElementById('overlay');
+const appContainer = document.getElementById('app-container');
+const appBody = document.getElementById('app-body');
+
+const MOBILE_BREAKPOINT = 768;
 
 const DEFAULT_STATUS = {
   title: 'Готово',
@@ -36,36 +41,60 @@ function safeJSONParse(text) {
   }
 }
 
-function closeMenu() {
-  if (!navbar || !overlay) return;
-
-  navbar.classList.remove('open');
-  overlay.classList.remove('open');
-  navDrawer?.setAttribute('aria-hidden', 'true');
-  mobileMenuToggle?.setAttribute('aria-expanded', 'false');
-  document.body.style.overflow = '';
-
-  setTimeout(() => {
-    if (!overlay.classList.contains('open')) {
-      overlay.classList.remove('visible');
-    }
-  }, 300);
+function isMobile() {
+  return window.innerWidth < MOBILE_BREAKPOINT;
 }
 
+/* ---------------------------------------------------------------------------
+   Menu / Drawer logic
+   Desktop (>=769px): sidebar pushes content (margin-left on app-body), no overlay
+   Mobile  (<768px):   full-screen overlay with sidebar on top
+   --------------------------------------------------------------------------- */
 function openMenu() {
-  if (!navbar || !overlay) return;
+  if (!navbar || !appContainer) return;
 
-  overlay.classList.add('visible');
-  void overlay.offsetWidth;
-  navbar.classList.add('open');
-  overlay.classList.add('open');
+  navbar.classList.add('is-open');
+  menuToggle?.classList.add('is-open');
+  menuToggle?.setAttribute('aria-expanded', 'true');
   navDrawer?.setAttribute('aria-hidden', 'false');
-  mobileMenuToggle?.setAttribute('aria-expanded', 'true');
-  document.body.style.overflow = 'hidden';
+
+  if (isMobile()) {
+    // Mobile: full-screen overlay
+    overlay.classList.add('visible');
+    void overlay.offsetWidth; // force reflow for transition
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  } else {
+    // Desktop: push content
+    appContainer.classList.add('navbar-open');
+    appBody.style.marginLeft = 'var(--sidebar-w)';
+  }
+}
+
+function closeMenu() {
+  if (!navbar || !appContainer) return;
+
+  navbar.classList.remove('is-open');
+  menuToggle?.classList.remove('is-open');
+  menuToggle?.setAttribute('aria-expanded', 'false');
+  navDrawer?.setAttribute('aria-hidden', 'true');
+
+  if (isMobile()) {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+      if (!overlay.classList.contains('open')) {
+        overlay.classList.remove('visible');
+      }
+    }, 280);
+  } else {
+    appContainer.classList.remove('navbar-open');
+    appBody.style.marginLeft = '0';
+  }
 }
 
 function toggleMenu() {
-  if (navbar?.classList.contains('open')) {
+  if (navbar?.classList.contains('is-open')) {
     closeMenu();
   } else {
     openMenu();
@@ -303,14 +332,15 @@ function showPage(page, { pushState = true } = {}) {
   return true;
 }
 
-// Drawer controls
-mobileMenuToggle?.addEventListener('click', toggleMenu);
+// Menu controls
+menuToggle?.addEventListener('click', toggleMenu);
+navbarClose?.addEventListener('click', closeMenu);
 overlay?.addEventListener('click', closeMenu);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeMenu();
 });
 
-// Swipe left to close
+// Swipe left to close (mobile)
 let touchStartX = 0;
 let touchStartY = 0;
 document.addEventListener('touchstart', (e) => {
@@ -320,7 +350,7 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchend', (e) => {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-  if (dx < -60 && dy < 40 && navbar?.classList.contains('open')) {
+  if (dx < -60 && dy < 40 && navbar?.classList.contains('is-open')) {
     closeMenu();
   }
 }, { passive: true });

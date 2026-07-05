@@ -13,17 +13,17 @@
   <link rel="stylesheet" href="style-overrides.css" />
 </head>
 <body>
-  <div class="app-container">
-    <!-- Mobile top bar (visible only on mobile) -->
-    <header class="mobile-header" id="mobile-header">
-      <button id="mobile-menu-toggle" class="mobile-hamburger" aria-label="Открыть меню" aria-expanded="false" type="button">
+  <div class="app-container" id="app-container">
+    <!-- Top bar (always visible, on all screen sizes) -->
+    <header class="top-bar" id="top-bar">
+      <button id="menu-toggle" class="hamburger-btn" aria-label="Открыть меню" aria-expanded="false" type="button">
         <span></span>
         <span></span>
         <span></span>
       </button>
-      <div class="mobile-brand">
+      <div class="top-bar-brand">
         <div class="logo-mark" aria-hidden="true">
-          <svg class="icon icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3c1.7 0 3.3.5 4.5 1.5" />
             <path d="M7 6.5A8 8 0 0 1 12 5" />
             <path d="M5 12a7 7 0 0 1 14 0" />
@@ -36,16 +36,16 @@
           <span class="beta-badge">БЕТА</span>
         </div>
       </div>
-      <div class="mobile-header-spacer"></div>
+      <div class="top-bar-spacer"></div>
     </header>
 
-    <!-- Sidebar (desktop: always visible, mobile: slide-out drawer) -->
+    <!-- Sidebar (hidden by default, slides in via JS) -->
     <nav class="navbar" id="navbar">
       <div class="navbar-content">
         <div class="navbar-top">
           <div class="logo-section">
             <div class="logo-mark" aria-hidden="true">
-              <svg class="icon icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 3c1.7 0 3.3.5 4.5 1.5" />
                 <path d="M7 6.5A8 8 0 0 1 12 5" />
                 <path d="M5 12a7 7 0 0 1 14 0" />
@@ -58,6 +58,12 @@
               <span class="beta-badge">БЕТА</span>
             </div>
           </div>
+          <button class="navbar-close" id="navbar-close" aria-label="Закрыть меню" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
 
         <div id="nav-drawer" class="nav-drawer" aria-hidden="true">
@@ -125,237 +131,240 @@
 
     <div id="overlay" class="overlay" aria-hidden="true"></div>
 
-    <main class="main-container">
-      <div id="main-page" class="page active">
-        <section class="welcome-shell">
-          <div class="welcome-card">
-            <div class="welcome-layout welcome-layout--solo">
-              <div class="welcome-copy">
-                <div class="welcome-eyebrow">AI Voice Studio</div>
-                <h1 class="welcome-title">Добро пожаловать в <strong>Sonexa</strong></h1>
-                <p class="welcome-subtitle">
-                  Пиши текст, выбирай голос и получай речь без лишнего шума. Это не чат и не болтовня — это аккуратный интерфейс для TTS, который удобно использовать и на телефоне, и на ПК.
-                </p>
+    <!-- App body: main + footer, shifts on desktop when sidebar opens -->
+    <div class="app-body" id="app-body">
+      <main class="main-container">
+        <div id="main-page" class="page active">
+          <section class="welcome-shell">
+            <div class="welcome-card">
+              <div class="welcome-layout welcome-layout--solo">
+                <div class="welcome-copy">
+                  <div class="welcome-eyebrow">AI Voice Studio</div>
+                  <h1 class="welcome-title">Добро пожаловать в <strong>Sonexa</strong></h1>
+                  <p class="welcome-subtitle">
+                    Пиши текст, выбирай голос и получай речь без лишнего шума. Это не чат и не болтовня — это аккуратный интерфейс для TTS, который удобно использовать и на телефоне, и на ПК.
+                  </p>
 
-                <div class="welcome-actions">
-                  <button class="btn btn-primary" data-page-jump="tts" type="button">
-                    <span class="icon icon-sm" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4" width="18" height="16" rx="4" />
-                        <path d="M7 9h10" />
-                        <path d="M7 13h6" />
-                      </svg>
-                    </span>
-                    <span>Открыть TTS</span>
-                  </button>
-                  <button class="btn btn-secondary" data-page-jump="about" type="button">
-                    <span class="icon icon-sm" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M12 11v5" />
-                        <path d="M12 8h.01" />
-                      </svg>
-                    </span>
-                    <span>О проекте</span>
-                  </button>
-                </div>
+                  <div class="welcome-actions">
+                    <button class="btn btn-primary" data-page-jump="tts" type="button">
+                      <span class="icon icon-sm" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="4" width="18" height="16" rx="4" />
+                          <path d="M7 9h10" />
+                          <path d="M7 13h6" />
+                        </svg>
+                      </span>
+                      <span>Открыть TTS</span>
+                    </button>
+                    <button class="btn btn-secondary" data-page-jump="about" type="button">
+                      <span class="icon icon-sm" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 11v5" />
+                          <path d="M12 8h.01" />
+                        </svg>
+                      </span>
+                      <span>О проекте</span>
+                    </button>
+                  </div>
 
-                <div class="welcome-pills">
-                  <span class="hero-pill">Натуральные голоса</span>
-                  <span class="hero-pill">Быстрая генерация</span>
-                  <span class="hero-pill">Приватный поток</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="welcome-spoilers">
-              <details class="spoiler-card">
-                <summary>Мы разрабатываем ИИ, которая создаёт музыку</summary>
-                <p>Это отдельное направление Sonexa: генерация музыкальных идей, аранжировок и звуковых сцен с упором на простой, понятный интерфейс.</p>
-              </details>
-
-              <details class="spoiler-card">
-                <summary>ASR появится следующим шагом</summary>
-                <p>Следом добавим расшифровку речи в текст, чтобы сервис закрыл оба сценария: озвучку и распознавание.</p>
-              </details>
-
-              <details class="spoiler-card">
-                <summary>Интерфейс продолжит расти</summary>
-                <p>Мы будем дальше подгонять desktop- и mobile-варианты так, чтобы всё было удобно и не перегружало экран.</p>
-              </details>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div id="tts-page" class="page">
-        <section class="service-shell">
-          <div class="service-head">
-            <div>
-              <div class="service-kicker">Сервис</div>
-              <h1 class="service-title">Озвучка текста</h1>
-              <p class="service-subtitle">
-                Выбирай голос, вводи текст и создавай речь в пару кликов.
-              </p>
-            </div>
-          </div>
-
-          <div class="service-steps" aria-label="Как работает TTS">
-            <div class="service-step"><strong>1</strong><span>Вставь текст</span></div>
-            <div class="service-step"><strong>2</strong><span>Выбери голос</span></div>
-            <div class="service-step"><strong>3</strong><span>Создай и скачай</span></div>
-          </div>
-
-          <div class="panel" id="tts-panel">
-            <div class="panel-grid">
-              <div class="column">
-                <div class="form-group">
-                  <label class="form-label" for="text">Твой текст</label>
-                  <textarea
-                    id="text"
-                    class="text-input"
-                    placeholder="Введи текст, который нужно озвучить..."
-                    maxlength="2000"
-                  ></textarea>
-                  <div class="char-count">
-                    <span id="char-count">0</span> / 2000
+                  <div class="welcome-pills">
+                    <span class="hero-pill">Натуральные голоса</span>
+                    <span class="hero-pill">Быстрая генерация</span>
+                    <span class="hero-pill">Приватный поток</span>
                   </div>
                 </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="voice">Голос</label>
-                  <select id="voice" class="voice-select">
-                    <optgroup label="Женские голоса">
-                      <option value="serena">Серена - Тёплый и дружелюбный</option>
-                      <option value="ono_anna">Анна - Мягкий и нежный</option>
-                      <option value="sohee">Софи - Энергичный и ясный</option>
-                      <option value="vivian">Виктория - Профессиональный тон</option>
-                    </optgroup>
-                    <optgroup label="Мужские голоса">
-                      <option value="ryan">Райан - Профессиональный</option>
-                      <option value="aiden">Эйден - Нейтральный и ясный</option>
-                      <option value="dylan">Дилан - Непринужденный тон</option>
-                      <option value="eric">Эрик - Формальный и сильный</option>
-                      <option value="uncle_fu">Дядя Фу - Рассказчик</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <button id="generate" class="btn btn-primary btn-large" type="button">
-                  <span class="icon icon-sm" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 3v18" />
-                      <path d="M5 10l7-7 7 7" />
-                    </svg>
-                  </span>
-                  <span class="btn-text">Создать речь</span>
-                  <span class="btn-arrow" aria-hidden="true">&rarr;</span>
-                </button>
               </div>
 
-              <div class="column">
-                <div id="status-section" class="status-section">
-                  <div id="status" class="status idle">
-                    <span class="status-icon">&#10003;</span>
-                    <div class="status-content">
-                      <div class="status-title">Готово</div>
-                      <div class="status-message">Введи текст и нажми кнопку, чтобы создать речь</div>
+              <div class="welcome-spoilers">
+                <details class="spoiler-card">
+                  <summary>Мы разрабатываем ИИ, которая создаёт музыку</summary>
+                  <p>Это отдельное направление Sonexa: генерация музыкальных идей, аранжировок и звуковых сцен с упором на простой, понятный интерфейс.</p>
+                </details>
+
+                <details class="spoiler-card">
+                  <summary>ASR появится следующим шагом</summary>
+                  <p>Следом добавим расшифровку речи в текст, чтобы сервис закрыл оба сценария: озвучку и распознавание.</p>
+                </details>
+
+                <details class="spoiler-card">
+                  <summary>Интерфейс продолжит расти</summary>
+                  <p>Мы будем дальше подгонять desktop- и mobile-варианты так, чтобы всё было удобно и не перегружало экран.</p>
+                </details>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div id="tts-page" class="page">
+          <section class="service-shell">
+            <div class="service-head">
+              <div>
+                <div class="service-kicker">Сервис</div>
+                <h1 class="service-title">Озвучка текста</h1>
+                <p class="service-subtitle">
+                  Выбирай голос, вводи текст и создавай речь в пару кликов.
+                </p>
+              </div>
+            </div>
+
+            <div class="service-steps" aria-label="Как работает TTS">
+              <div class="service-step"><strong>1</strong><span>Вставь текст</span></div>
+              <div class="service-step"><strong>2</strong><span>Выбери голос</span></div>
+              <div class="service-step"><strong>3</strong><span>Создай и скачай</span></div>
+            </div>
+
+            <div class="panel" id="tts-panel">
+              <div class="panel-grid">
+                <div class="column">
+                  <div class="form-group">
+                    <label class="form-label" for="text">Твой текст</label>
+                    <textarea
+                      id="text"
+                      class="text-input"
+                      placeholder="Введи текст, который нужно озвучить..."
+                      maxlength="2000"
+                    ></textarea>
+                    <div class="char-count">
+                      <span id="char-count">0</span> / 2000
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="voice">Голос</label>
+                    <select id="voice" class="voice-select">
+                      <optgroup label="Женские голоса">
+                        <option value="serena">Серена - Тёплый и дружелюбный</option>
+                        <option value="ono_anna">Анна - Мягкий и нежный</option>
+                        <option value="sohee">Софи - Энергичный и ясный</option>
+                        <option value="vivian">Виктория - Профессиональный тон</option>
+                      </optgroup>
+                      <optgroup label="Мужские голоса">
+                        <option value="ryan">Райан - Профессиональный</option>
+                        <option value="aiden">Эйден - Нейтральный и ясный</option>
+                        <option value="dylan">Дилан - Непринужденный тон</option>
+                        <option value="eric">Эрик - Формальный и сильный</option>
+                        <option value="uncle_fu">Дядя Фу - Рассказчик</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <button id="generate" class="btn btn-primary btn-large" type="button">
+                    <span class="icon icon-sm" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3v18" />
+                        <path d="M5 10l7-7 7 7" />
+                      </svg>
+                    </span>
+                    <span class="btn-text">Создать речь</span>
+                    <span class="btn-arrow" aria-hidden="true">&rarr;</span>
+                  </button>
+                </div>
+
+                <div class="column">
+                  <div id="status-section" class="status-section">
+                    <div id="status" class="status idle">
+                      <span class="status-icon">&#10003;</span>
+                      <div class="status-content">
+                        <div class="status-title">Готово</div>
+                        <div class="status-message">Введи текст и нажми кнопку, чтобы создать речь</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="player-section" class="player-section" style="display: none;">
+                    <div class="player-header">
+                      <h3 class="player-title">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12a7 7 0 0 1 14 0" />
+                            <path d="M8 12a4 4 0 0 1 8 0" />
+                            <path d="M12 12v7" />
+                          </svg>
+                        </span>
+                        Результат
+                      </h3>
+                      <button id="clear-btn" class="btn-icon-only" title="Закрыть плеер" aria-label="Закрыть плеер" type="button">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                          </svg>
+                        </span>
+                      </button>
+                    </div>
+                    <audio id="audio" controls class="audio-player"></audio>
+                    <div class="player-actions">
+                      <button id="download-btn" class="btn btn-secondary" type="button">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3v12" />
+                            <path d="m8 11 4 4 4-4" />
+                            <path d="M5 19h14" />
+                          </svg>
+                        </span>
+                        Скачать
+                      </button>
+                      <button id="copy-url-btn" class="btn btn-secondary" type="button">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="11" height="11" rx="2" />
+                            <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                          </svg>
+                        </span>
+                        Копировать ссылку
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                <div id="player-section" class="player-section" style="display: none;">
-                  <div class="player-header">
-                    <h3 class="player-title">
-                      <span class="icon icon-sm" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M5 12a7 7 0 0 1 14 0" />
-                          <path d="M8 12a4 4 0 0 1 8 0" />
-                          <path d="M12 12v7" />
-                        </svg>
-                      </span>
-                      Результат
-                    </h3>
-                    <button id="clear-btn" class="btn-icon-only" title="Закрыть плеер" aria-label="Закрыть плеер" type="button">
-                      <span class="icon icon-sm" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M18 6 6 18" />
-                          <path d="m6 6 12 12" />
-                        </svg>
-                      </span>
-                    </button>
-                  </div>
-                  <audio id="audio" controls class="audio-player"></audio>
-                  <div class="player-actions">
-                    <button id="download-btn" class="btn btn-secondary" type="button">
-                      <span class="icon icon-sm" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M12 3v12" />
-                          <path d="m8 11 4 4 4-4" />
-                          <path d="M5 19h14" />
-                        </svg>
-                      </span>
-                      Скачать
-                    </button>
-                    <button id="copy-url-btn" class="btn btn-secondary" type="button">
-                      <span class="icon icon-sm" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                          <rect x="9" y="9" width="11" height="11" rx="2" />
-                          <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-                        </svg>
-                      </span>
-                      Копировать ссылку
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
 
-      <div id="about-page" class="page">
-        <section class="about-section">
-          <div class="about-header">
-            <h1 class="about-title">О Sonexa</h1>
-            <p class="about-intro">
-              Sonexa — это чистый и спокойный интерфейс для синтеза речи. Мы строим не чат, а инструмент, который быстро доводит пользователя до результата.
-            </p>
-          </div>
+        <div id="about-page" class="page">
+          <section class="about-section">
+            <div class="about-header">
+              <h1 class="about-title">О Sonexa</h1>
+              <p class="about-intro">
+                Sonexa — это чистый и спокойный интерфейс для синтеза речи. Мы строим не чат, а инструмент, который быстро доводит пользователя до результата.
+              </p>
+            </div>
 
-          <div class="about-content">
-            <div class="about-card">
-              <h2>Что это за проект</h2>
-              <p>Проект начался с идеи сделать TTS без лишнего шума, лишних экранов и лишнего трения. Сейчас Sonexa — это рабочий продукт с понятной структурой и фокусом на качестве голоса.</p>
+            <div class="about-content">
+              <div class="about-card">
+                <h2>Что это за проект</h2>
+                <p>Проект начался с идеи сделать TTS без лишнего шума, лишних экранов и лишнего трения. Сейчас Sonexa — это рабочий продукт с понятной структурой и фокусом на качестве голоса.</p>
+              </div>
+              <div class="about-card">
+                <h2>Что дальше</h2>
+                <p>Следом идут ASR и Music AI Generation. Мы развиваем один интерфейс, который постепенно превратится в полноценную медиа-платформу.</p>
+              </div>
+              <div class="about-card">
+                <h2>Наша философия</h2>
+                <p>Минимум шума, максимум пользы. Быстрый вход, чистый результат, аккуратный дизайн и никакой перегрузки на мобилках и ПК.</p>
+              </div>
             </div>
-            <div class="about-card">
-              <h2>Что дальше</h2>
-              <p>Следом идут ASR и Music AI Generation. Мы развиваем один интерфейс, который постепенно превратится в полноценную медиа-платформу.</p>
+            <div class="about-actions">
+              <button class="nav-link nav-btn" data-page="main" type="button">
+                <span class="icon icon-sm" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                </span>
+                <span>Вернуться на главную</span>
+              </button>
             </div>
-            <div class="about-card">
-              <h2>Наша философия</h2>
-              <p>Минимум шума, максимум пользы. Быстрый вход, чистый результат, аккуратный дизайн и никакой перегрузки на мобилках и ПК.</p>
-            </div>
-          </div>
-          <div class="about-actions">
-            <button class="nav-link nav-btn" data-page="main" type="button">
-              <span class="icon icon-sm" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
-              </span>
-              <span>Вернуться на главную</span>
-            </button>
-          </div>
-        </section>
-      </div>
-    </main>
+          </section>
+        </div>
+      </main>
 
-    <footer class="footer">
-      <div class="footer-content">
-        <p>&copy; 2026 Sonexa Inc. Создано с &#10084;&#65039; в России.</p>
-      </div>
-    </footer>
+      <footer class="footer">
+        <div class="footer-content">
+          <p>&copy; 2026 Sonexa Inc. Создано с &#10084;&#65039; в России.</p>
+        </div>
+      </footer>
+    </div>
   </div>
 
   <script src="/src/app.js"></script>

@@ -53,6 +53,7 @@
   border: 1px solid var(--border);
   color: var(--text-secondary);
   transition: var(--transition);
+  min-height: 44px;
 }
 .service-step:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
 
@@ -100,7 +101,7 @@
 .audio-player { width: 100%; max-width: 100%; }
 .player-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
-/* About */
+/* About — these rules are also in style.css but kept here for endpoint-specific overrides */
 .about-section { max-width: 860px; margin: 0 auto; padding: 48px 0; }
 .about-header { margin-bottom: 32px; }
 .about-intro { max-width: 620px; color: var(--text-secondary); font-size: 16px; line-height: 1.7; }
@@ -117,11 +118,12 @@
 .about-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.02em; }
 .about-card p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); }
 
-/* Responsive — Tablet */
+/* Responsive — Large desktop */
 @media (min-width: 1100px) {
   .service-shell { padding-top: 56px; }
 }
 
+/* Responsive — Tablet */
 @media (max-width: 1024px) {
   .about-content { grid-template-columns: 1fr; }
   .panel-grid { grid-template-columns: 1fr; }
