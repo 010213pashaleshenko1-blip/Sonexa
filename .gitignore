@@ -1,0 +1,8 @@
+# Локальные артефакты
+node_modules/
+.vercel/
+.DS_Store
+*.log
+
+# Временные файлы съёмки видео
+frames/
