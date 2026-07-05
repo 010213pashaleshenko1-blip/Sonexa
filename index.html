@@ -98,6 +98,15 @@
               </span>
               <span>О проекте</span>
             </button>
+            <button class="nav-link nav-btn" data-page="settings" type="button">
+              <span class="icon icon-sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </span>
+              <span>Настройки</span>
+            </button>
           </div>
 
           <div class="nav-group">
@@ -124,39 +133,6 @@
               <span>Music AI Generation</span>
               <span class="coming-soon">Скоро</span>
             </button>
-          </div>
-
-          <!-- Theme switcher -->
-          <div class="theme-group">
-            <div class="theme-group-title">Тема</div>
-            <div class="theme-options">
-              <button class="theme-btn" data-theme-value="dark" type="button">
-                <span class="theme-btn-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                  </svg>
-                </span>
-                Тёмная
-              </button>
-              <button class="theme-btn" data-theme-value="light" type="button">
-                <span class="theme-btn-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="5"/>
-                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                  </svg>
-                </span>
-                Светлая
-              </button>
-              <button class="theme-btn" data-theme-value="system" type="button">
-                <span class="theme-btn-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                    <path d="M8 21h8M12 17v4"/>
-                  </svg>
-                </span>
-                Система
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -389,6 +365,100 @@
               </button>
             </div>
             <div class="easter-egg" aria-hidden="true">Привет mexet0 :)</div>
+          </section>
+        </div>
+
+        <div id="settings-page" class="page">
+          <section class="settings-section">
+            <div class="settings-header">
+              <h1 class="settings-title">Настройки</h1>
+              <p class="settings-subtitle">Настрой Sonexa под себя — выбери тему и другие параметры.</p>
+            </div>
+
+            <div class="settings-list">
+              <!-- Theme -->
+              <div class="settings-item">
+                <div class="settings-item-info">
+                  <div class="settings-item-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="5"/>
+                      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="settings-item-title">Тема оформления</div>
+                    <div class="settings-item-desc">Выбери тёмную, светлую или системную тему</div>
+                  </div>
+                </div>
+                <div class="settings-item-control">
+                  <div class="theme-options">
+                    <button class="theme-btn" data-theme-value="dark" type="button">
+                      <span class="theme-btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                      </span>
+                      Тёмная
+                    </button>
+                    <button class="theme-btn" data-theme-value="light" type="button">
+                      <span class="theme-btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="5"/>
+                          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        </svg>
+                      </span>
+                      Светлая
+                    </button>
+                    <button class="theme-btn" data-theme-value="system" type="button">
+                      <span class="theme-btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                          <path d="M8 21h8M12 17v4"/>
+                        </svg>
+                      </span>
+                      Система
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Theme preview -->
+              <div class="settings-item">
+                <div class="settings-item-info">
+                  <div class="settings-item-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="settings-item-title">Предпросмотр</div>
+                    <div class="settings-item-desc">Как выглядит текущая тема</div>
+                  </div>
+                </div>
+                <div class="settings-item-control">
+                  <div class="theme-preview" id="theme-preview">
+                    <div class="theme-preview-bar"></div>
+                    <div class="theme-preview-body">
+                      <div class="theme-preview-line" style="width:60%"></div>
+                      <div class="theme-preview-line" style="width:80%"></div>
+                      <div class="theme-preview-line" style="width:40%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-actions">
+              <button class="nav-link nav-btn" data-page="main" type="button">
+                <span class="icon icon-sm" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                </span>
+                <span>Вернуться на главную</span>
+              </button>
+            </div>
           </section>
         </div>
       </main>
