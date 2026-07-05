@@ -108,34 +108,58 @@ function injectHomeAnimations() {
       isolation: isolate;
     }
 
-    .welcome-card::before,
-    .welcome-card::after {
-      content: "";
-      position: absolute;
-      inset: auto;
-      border-radius: 999px;
+    .welcome-orb-cloud {
+      position: relative;
+      z-index: 0;
+      height: clamp(96px, 13vw, 156px);
+      margin: -2px 0 8px;
       pointer-events: none;
-      z-index: -1;
-      filter: blur(26px);
-      opacity: 0.8;
-      animation: sonexa-orb-float 10s ease-in-out infinite;
+      overflow: visible;
     }
 
-    .welcome-card::before {
-      width: 18rem;
-      height: 18rem;
-      top: -4rem;
-      right: -3rem;
-      background: radial-gradient(circle, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0));
+    .welcome-orb-cloud .orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(14px);
+      transform-origin: center;
+      animation: sonexa-orb-drift 9s ease-in-out infinite;
     }
 
-    .welcome-card::after {
-      width: 14rem;
-      height: 14rem;
-      bottom: -4rem;
-      left: -2rem;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
-      animation-delay: -4s;
+    .welcome-orb-cloud .orb-a {
+      width: clamp(82px, 9vw, 130px);
+      height: clamp(82px, 9vw, 130px);
+      left: 16%;
+      top: 8%;
+      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.10), rgba(245, 158, 11, 0.00) 60%), radial-gradient(circle, rgba(245, 158, 11, 0.20), rgba(245, 158, 11, 0.00) 72%);
+      animation-delay: -1.5s;
+    }
+
+    .welcome-orb-cloud .orb-b {
+      width: clamp(126px, 14vw, 210px);
+      height: clamp(126px, 14vw, 210px);
+      left: 50%;
+      top: -6%;
+      transform: translateX(-50%);
+      background: radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.00) 58%), radial-gradient(circle, rgba(217, 119, 6, 0.18), rgba(217, 119, 6, 0.00) 72%);
+      animation-duration: 11s;
+    }
+
+    .welcome-orb-cloud .orb-c {
+      width: clamp(90px, 10vw, 150px);
+      height: clamp(90px, 10vw, 150px);
+      right: 14%;
+      top: 10%;
+      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.09), rgba(245, 158, 11, 0.00) 60%), radial-gradient(circle, rgba(255, 179, 71, 0.22), rgba(255, 179, 71, 0.00) 72%);
+      animation-delay: -3s;
+      animation-duration: 10s;
+    }
+
+    .welcome-orb-cloud .orb-glow {
+      inset: 0;
+      background: radial-gradient(ellipse at center top, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.00) 66%);
+      filter: blur(22px);
+      opacity: 0.95;
+      animation: sonexa-glow-breathe 8s ease-in-out infinite;
     }
 
     .welcome-greeting {
@@ -145,34 +169,32 @@ function injectHomeAnimations() {
     }
 
     .welcome-copy > *,
-    .welcome-side > *,
     .welcome-spoilers > * {
       opacity: 0;
       transform: translateY(14px) scale(0.99);
-      animation: sonexa-rise-in 700ms cubic-bezier(0.2, 0, 0, 1) forwards;
+      animation: sonexa-rise-in 720ms cubic-bezier(0.2, 0, 0, 1) forwards;
     }
 
-    .welcome-copy > *:nth-child(1) { animation-delay: 40ms; }
-    .welcome-copy > *:nth-child(2) { animation-delay: 110ms; }
-    .welcome-copy > *:nth-child(3) { animation-delay: 180ms; }
-    .welcome-copy > *:nth-child(4) { animation-delay: 250ms; }
+    .welcome-copy > *:nth-child(1) { animation-delay: 60ms; }
+    .welcome-copy > *:nth-child(2) { animation-delay: 140ms; }
+    .welcome-copy > *:nth-child(3) { animation-delay: 220ms; }
+    .welcome-copy > *:nth-child(4) { animation-delay: 300ms; }
 
-    .welcome-side > *:nth-child(1) { animation-delay: 180ms; }
-    .welcome-side > *:nth-child(2) { animation-delay: 260ms; }
-    .welcome-side > *:nth-child(3) { animation-delay: 340ms; }
+    .welcome-spoilers > *:nth-child(1) { animation-delay: 460ms; }
+    .welcome-spoilers > *:nth-child(2) { animation-delay: 540ms; }
+    .welcome-spoilers > *:nth-child(3) { animation-delay: 620ms; }
 
-    .welcome-spoilers > *:nth-child(1) { animation-delay: 420ms; }
-    .welcome-spoilers > *:nth-child(2) { animation-delay: 500ms; }
-    .welcome-spoilers > *:nth-child(3) { animation-delay: 580ms; }
-
-    .welcome-side-card,
-    .spoiler-card,
     .hero-pill,
-    .welcome-actions .btn {
+    .welcome-actions .btn,
+    .spoiler-card,
+    .welcome-orb-cloud .orb {
       transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
     }
 
-    .welcome-side-card:hover,
+    .welcome-orb-cloud:hover .orb {
+      transform: translateY(-2px) scale(1.02);
+    }
+
     .spoiler-card:hover {
       transform: translateY(-2px);
       border-color: rgba(255, 255, 255, 0.14);
@@ -212,23 +234,27 @@ function injectHomeAnimations() {
       50% { opacity: 1; transform: scaleX(1.03); }
     }
 
-    @keyframes sonexa-orb-float {
+    @keyframes sonexa-orb-drift {
       0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-      50% { transform: translate3d(0, -10px, 0) scale(1.04); }
+      50% { transform: translate3d(0, -10px, 0) scale(1.05); }
+    }
+
+    @keyframes sonexa-glow-breathe {
+      0%, 100% { opacity: 0.72; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.04); }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .welcome-card::before,
       .welcome-card::after,
       .welcome-copy > *,
-      .welcome-side > *,
       .welcome-spoilers > *,
-      .welcome-title strong::after {
+      .welcome-title strong::after,
+      .welcome-orb-cloud .orb {
         animation: none !important;
       }
 
       .welcome-copy > *,
-      .welcome-side > *,
       .welcome-spoilers > * {
         opacity: 1;
         transform: none;
@@ -236,6 +262,23 @@ function injectHomeAnimations() {
     }
   `;
   document.head.appendChild(style);
+}
+
+function setupWelcomeOrbCloud() {
+  const welcomeCard = document.querySelector('.welcome-card');
+  if (!welcomeCard || welcomeCard.querySelector('.welcome-orb-cloud')) return;
+
+  const cloud = document.createElement('div');
+  cloud.className = 'welcome-orb-cloud';
+  cloud.setAttribute('aria-hidden', 'true');
+  cloud.innerHTML = `
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+    <span class="orb orb-glow"></span>
+  `;
+
+  welcomeCard.insertBefore(cloud, welcomeCard.firstChild);
 }
 
 function patchShellNavigation() {
@@ -375,6 +418,7 @@ document.querySelectorAll('[data-page-jump]').forEach((btn) => {
 });
 
 injectHomeAnimations();
+setupWelcomeOrbCloud();
 patchShellNavigation();
 setDynamicGreeting();
 
