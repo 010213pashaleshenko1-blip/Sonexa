@@ -17,9 +17,6 @@
 (() => {
   const STORAGE_KEY = 'sonexa-chat-chats';
   const ACTIVE_KEY = 'sonexa-chat-active';
-  const POLL_INTERVAL_MS = 500;
-  const STALL_TIMEOUT_MS = 2000;
-  const MAX_POLL_DURATION_MS = 60000; // максимум минуту ждём
 
   // DOM
   const fab = document.getElementById('chat-fab');
@@ -371,8 +368,8 @@
   }
 
   async function streamAssistantResponse(chat, contentEl) {
-    // 1. POST /api/chat
-    const postRes = await fetch('/api/chat', {
+    // Используем fetch с потоковым чтением (SSE)
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -381,66 +378,88 @@
         max_tokens: 1024,
       }),
     });
-    if (!postRes.ok) {
-      const err = await postRes.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${postRes.status}`);
-    }
-    const { job_id } = await postRes.json();
-    if (!job_id) throw new Error('Сервер не вернул job_id');
 
-    // 2. Poll GET /api/chat?job_id=xxx каждые 500мс
-    const startTime = Date.now();
-    let lastContent = '';
-    let lastChangeAt = Date.now();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    if (!res.body) {
+      // Fallback: читаем весь ответ
+      const text = await res.text();
+      contentEl.innerHTML = formatMessage(text);
+      chat.messages.push({ role: 'assistant', content: text });
+      saveChats();
+      return;
+    }
+
+    // Читаем SSE поток
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullContent = '';
+    let gotFirstChunk = false;
 
     while (true) {
-      await sleep(POLL_INTERVAL_MS);
+      const { done, value } = await reader.read();
+      if (done) break;
 
-      const elapsed = Date.now() - startTime;
-      if (elapsed > MAX_POLL_DURATION_MS) {
-        throw new Error('Превышено время ожидания ответа (60с)');
-      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // последняя неполная строка
 
-      const getRes = await fetch(`/api/chat?job_id=${encodeURIComponent(job_id)}`);
-      if (!getRes.ok) {
-        const err = await getRes.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${getRes.status}`);
-      }
-      const data = await getRes.json();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
 
-      if (data.status === 'error') {
-        throw new Error(data.error || 'Сервер сообщил об ошибке');
-      }
-
-      // Обновляем контент в UI
-      if (data.content && data.content !== lastContent) {
-        lastContent = data.content;
-        lastChangeAt = Date.now();
-        contentEl.classList.add('is-streaming');
-        contentEl.innerHTML = formatMessage(data.content);
-        scrollToBottom();
-      }
-
-      // Завершаем если статус done ИЛИ контент не менялся > 2с
-      const stallMs = Date.now() - lastChangeAt;
-      if (data.status === 'done') {
-        // Финальный контент
-        if (data.content) {
-          contentEl.innerHTML = formatMessage(data.content);
-          lastContent = data.content;
+        let data;
+        try {
+          data = JSON.parse(jsonStr);
+        } catch {
+          continue;
         }
-        contentEl.classList.remove('is-streaming');
-        break;
+
+        if (data.status === 'error') {
+          throw new Error(data.error || 'Сервер сообщил об ошибке');
+        }
+
+        if (data.status === 'chunk') {
+          if (!gotFirstChunk) {
+            gotFirstChunk = true;
+            contentEl.classList.add('is-streaming');
+          }
+          fullContent = data.content || '';
+          contentEl.innerHTML = formatMessage(fullContent);
+          scrollToBottom();
+        }
+
+        if (data.status === 'done') {
+          fullContent = data.content || fullContent;
+          contentEl.innerHTML = formatMessage(fullContent);
+          contentEl.classList.remove('is-streaming');
+        }
       }
-      if (data.content && stallMs > STALL_TIMEOUT_MS) {
-        // Модель дописала (по нашим правилам: 2с без изменений)
-        contentEl.classList.remove('is-streaming');
-        break;
-      }
+    }
+
+    // Обрабатываем оставшийся буфер
+    if (buffer.startsWith('data: ')) {
+      try {
+        const data = JSON.parse(buffer.slice(6).trim());
+        if (data.status === 'done' && data.content) {
+          fullContent = data.content;
+          contentEl.innerHTML = formatMessage(fullContent);
+        }
+      } catch {}
+    }
+
+    contentEl.classList.remove('is-streaming');
+    if (!fullContent) {
+      throw new Error('Пустой ответ от модели');
     }
 
     // Сохраняем финальный ответ в chat
-    chat.messages.push({ role: 'assistant', content: lastContent });
+    chat.messages.push({ role: 'assistant', content: fullContent });
     saveChats();
   }
 
