@@ -142,17 +142,6 @@
             </button>
           </div>
         </div>
-
-        <div class="navbar-footer">
-          <div class="navbar-footer-version">
-            <span class="navbar-footer-dot" aria-hidden="true"></span>
-            <span>Sonexa <strong>v1.0.0-бета</strong></span>
-          </div>
-          <a href="https://github.com/010213pashaleshenko1-blip/Sonexa" target="_blank" rel="noopener noreferrer" class="navbar-footer-link">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.74 1.27 3.41.97.11-.76.41-1.27.74-1.56-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.42.36.79 1.07.79 2.16v3.2c0 .31.21.68.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/></svg>
-            GitHub
-          </a>
-        </div>
       </div>
     </nav>
 
@@ -296,7 +285,7 @@
 
                   <div class="form-group">
                     <label class="form-label" for="voice">Голос</label>
-                    <select id="voice" class="voice-select" aria-hidden="true" tabindex="-1">
+                    <select id="voice" class="voice-select voice-select--native-hidden" tabindex="-1" aria-hidden="true" hidden>
                       <optgroup label="Женские голоса">
                         <option value="serena">Серена - Тёплый и дружелюбный</option>
                         <option value="ono_anna">Анна - Мягкий и нежный</option>
@@ -595,28 +584,6 @@
                   <span class="speed-value" id="speed-value">1.0×</span>
                 </div>
               </div>
-
-              <!-- App info -->
-              <div class="settings-item settings-item--info">
-                <div class="settings-item-info">
-                  <div class="settings-item-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="10"/>
-                      <path d="M12 16v-4"/>
-                      <path d="M12 8h.01"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="settings-item-title">О приложении</div>
-                    <div class="settings-item-desc">Sonexa v1.0.0-бета • Россия, 2026</div>
-                  </div>
-                </div>
-                <div class="settings-item-control">
-                  <a href="https://github.com/010213pashaleshenko1-blip/Sonexa" target="_blank" rel="noopener noreferrer" class="settings-link-btn">
-                    GitHub <span aria-hidden="true">&#8599;</span>
-                  </a>
-                </div>
-              </div>
             </div>
 
             <div class="settings-actions">
@@ -643,11 +610,7 @@
             <span>Создано с &#10084;&#65039; в России</span>
           </div>
           <div class="footer-row footer-row--muted">
-            <a href="https://github.com/010213pashaleshenko1-blip/Sonexa" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
-            <span class="footer-sep" aria-hidden="true">·</span>
             <button class="footer-link footer-link--btn" data-page="about" type="button">О проекте</button>
-            <span class="footer-sep" aria-hidden="true">·</span>
-            <span>v1.0.0-бета</span>
           </div>
         </div>
       </footer>

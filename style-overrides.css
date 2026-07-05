@@ -22,8 +22,7 @@
    - Char progress bar
    - Keyboard hint badge on generate button
    - Player waveform animation
-   - Sidebar footer (version + GitHub)
-   - Settings: speech speed slider + app info card
+   - Settings: speech speed slider
    - Polished footer
    - Ambient background + page transitions + focus-visible
    ========================================================================== */
@@ -251,16 +250,9 @@
 .voice-card.is-active .voice-card-desc { color: var(--accent); opacity: 0.85; }
 
 /* Hide the native select visually but keep it accessible to JS */
+.voice-select--native-hidden,
 .voice-select[aria-hidden="true"] {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip: rect(0 0 0 0);
-  overflow: hidden;
-  pointer-events: none;
+  display: none !important;
 }
 
 /* ——— Keyboard hint badge on generate button ——— */
@@ -336,64 +328,7 @@
   .player-waveform.is-playing span { animation: none; height: 60%; }
 }
 
-/* ——— Sidebar footer ——— */
-.navbar-content {
-  display: flex;
-  flex-direction: column;
-}
-.navbar-footer {
-  margin-top: auto;
-  padding: 14px 16px calc(14px + var(--sab));
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-shrink: 0;
-  background: var(--bg-sidebar);
-}
-.navbar-footer-version {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-.navbar-footer-version strong {
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-.navbar-footer-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
-  animation: sonexa-pulse 2.4s ease-in-out infinite;
-}
-@keyframes sonexa-pulse {
-  0%, 100% { opacity: 0.7; }
-  50%      { opacity: 1; }
-}
-.navbar-footer-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: var(--transition);
-}
-.navbar-footer-link:hover {
-  color: var(--accent);
-  background: var(--surface-hover);
-  text-decoration: none;
-}
-
-/* ——— Settings: slider + info card ——— */
+/* ——— Polished footer ——— */
 .settings-item-control--slider {
   display: flex;
   align-items: center;
@@ -436,31 +371,6 @@
   font-variant-numeric: tabular-nums;
   min-width: 32px;
   text-align: right;
-}
-
-.settings-item--info {
-  background: var(--accent-soft);
-  border-color: var(--border-focus);
-}
-.settings-link-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  text-decoration: none;
-  transition: var(--transition);
-}
-.settings-link-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  text-decoration: none;
-  transform: translateY(-1px);
 }
 
 /* ——— Polished footer ——— */
@@ -602,19 +512,8 @@
   .player-waveform { height: 36px; gap: 2px; }
   .player-waveform span { width: 2px; }
 
-  .navbar-footer { padding: 12px 14px calc(12px + var(--sab)); }
-  .navbar-footer-version { font-size: 11px; }
-  .navbar-footer-link { font-size: 11px; }
-
   .settings-item-control--slider { min-width: 0; width: 100%; }
   .speed-slider { flex: 1; width: auto; }
-
-  .settings-item--info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .settings-item--info .settings-item-control { width: 100%; }
 
   .footer-row { font-size: 12px; gap: 6px; }
   .footer-row--muted { font-size: 11px; }
