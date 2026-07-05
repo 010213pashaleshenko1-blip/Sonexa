@@ -65,9 +65,9 @@ function openMenu() {
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
   } else {
-    // Desktop: push content
+    // Desktop: push content — shift app-body to the right
     appContainer.classList.add('navbar-open');
-    appBody.style.marginLeft = 'var(--sidebar-w)';
+    appBody.style.marginLeft = '260px';
   }
 }
 
