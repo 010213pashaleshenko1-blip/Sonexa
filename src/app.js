@@ -96,6 +96,148 @@ function updateNavState(page) {
   });
 }
 
+function injectHomeAnimations() {
+  if (document.getElementById('sonexa-home-animations')) return;
+
+  const style = document.createElement('style');
+  style.id = 'sonexa-home-animations';
+  style.textContent = `
+    .welcome-card {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .welcome-card::before,
+    .welcome-card::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: -1;
+      filter: blur(26px);
+      opacity: 0.8;
+      animation: sonexa-orb-float 10s ease-in-out infinite;
+    }
+
+    .welcome-card::before {
+      width: 18rem;
+      height: 18rem;
+      top: -4rem;
+      right: -3rem;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0));
+    }
+
+    .welcome-card::after {
+      width: 14rem;
+      height: 14rem;
+      bottom: -4rem;
+      left: -2rem;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+      animation-delay: -4s;
+    }
+
+    .welcome-greeting {
+      background: linear-gradient(135deg, rgba(217, 119, 6, 0.22), rgba(255, 255, 255, 0.08));
+      color: #f8d08a;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset, 0 14px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .welcome-copy > *,
+    .welcome-side > *,
+    .welcome-spoilers > * {
+      opacity: 0;
+      transform: translateY(14px) scale(0.99);
+      animation: sonexa-rise-in 700ms cubic-bezier(0.2, 0, 0, 1) forwards;
+    }
+
+    .welcome-copy > *:nth-child(1) { animation-delay: 40ms; }
+    .welcome-copy > *:nth-child(2) { animation-delay: 110ms; }
+    .welcome-copy > *:nth-child(3) { animation-delay: 180ms; }
+    .welcome-copy > *:nth-child(4) { animation-delay: 250ms; }
+
+    .welcome-side > *:nth-child(1) { animation-delay: 180ms; }
+    .welcome-side > *:nth-child(2) { animation-delay: 260ms; }
+    .welcome-side > *:nth-child(3) { animation-delay: 340ms; }
+
+    .welcome-spoilers > *:nth-child(1) { animation-delay: 420ms; }
+    .welcome-spoilers > *:nth-child(2) { animation-delay: 500ms; }
+    .welcome-spoilers > *:nth-child(3) { animation-delay: 580ms; }
+
+    .welcome-side-card,
+    .spoiler-card,
+    .hero-pill,
+    .welcome-actions .btn {
+      transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
+    }
+
+    .welcome-side-card:hover,
+    .spoiler-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.14);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    .hero-pill:hover,
+    .welcome-actions .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .welcome-title strong {
+      position: relative;
+      display: inline-block;
+    }
+
+    .welcome-title strong::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 6px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.0), rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.0));
+      z-index: -1;
+      filter: blur(8px);
+      animation: sonexa-highlight-pulse 3.8s ease-in-out infinite;
+    }
+
+    @keyframes sonexa-rise-in {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes sonexa-highlight-pulse {
+      0%, 100% { opacity: 0.55; transform: scaleX(0.96); }
+      50% { opacity: 1; transform: scaleX(1.03); }
+    }
+
+    @keyframes sonexa-orb-float {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(0, -10px, 0) scale(1.04); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .welcome-card::before,
+      .welcome-card::after,
+      .welcome-copy > *,
+      .welcome-side > *,
+      .welcome-spoilers > *,
+      .welcome-title strong::after {
+        animation: none !important;
+      }
+
+      .welcome-copy > *,
+      .welcome-side > *,
+      .welcome-spoilers > * {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function patchShellNavigation() {
   if (!navDrawer) return;
 
@@ -110,15 +252,12 @@ function patchShellNavigation() {
     servicesGroup.insertBefore(ttsButton, servicesGroup.querySelector('.nav-link.is-disabled') || null);
   }
 
-  const disabledButtons = Array.from(servicesGroup.querySelectorAll('.nav-link.is-disabled'));
-
-  const asrButton = disabledButtons.find((btn) => btn.textContent.includes('STT') || btn.textContent.includes('ASR'));
-  if (asrButton) {
-    const label = Array.from(asrButton.children).find(
-      (el) => el.tagName === 'SPAN' && !el.classList.contains('icon') && !el.classList.contains('coming-soon')
-    );
-    if (label) label.textContent = 'ASR';
-  }
+  const serviceButtons = Array.from(servicesGroup.querySelectorAll('.nav-link'));
+  serviceButtons.forEach((btn) => {
+    const textSpan = Array.from(btn.querySelectorAll('span')).find((el) => !el.classList.contains('icon') && !el.classList.contains('coming-soon'));
+    if (!textSpan) return;
+    if (/^STT$/i.test(textSpan.textContent.trim())) textSpan.textContent = 'ASR';
+  });
 
   let musicButton = servicesGroup.querySelector('[data-service="music-ai"]');
   if (!musicButton) {
@@ -140,17 +279,15 @@ function patchShellNavigation() {
     `;
   }
 
-  const asrCurrent = servicesGroup.querySelector('.nav-link.is-disabled span:not(.icon):not(.coming-soon)');
-  if (asrCurrent && asrCurrent.textContent !== 'ASR') {
-    asrCurrent.textContent = 'ASR';
-  }
-
   const musicExisting = Array.from(servicesGroup.querySelectorAll('.nav-link.is-disabled')).find(
     (btn) => btn.textContent.includes('Music AI Generation')
   );
   if (!musicExisting) {
-    const reference = asrButton || null;
-    servicesGroup.insertBefore(musicButton, reference);
+    const asrButton = Array.from(servicesGroup.querySelectorAll('.nav-link.is-disabled')).find((btn) => {
+      const textSpan = Array.from(btn.querySelectorAll('span')).find((el) => !el.classList.contains('icon') && !el.classList.contains('coming-soon'));
+      return textSpan && textSpan.textContent.trim() === 'ASR';
+    });
+    servicesGroup.insertBefore(musicButton, asrButton || null);
   }
 
   Array.from(pagesGroup.querySelectorAll('.nav-link')).forEach((btn) => {
@@ -162,10 +299,9 @@ function patchShellNavigation() {
   const metricBlocks = document.querySelectorAll('.metric-block');
   metricBlocks.forEach((block) => {
     const strong = block.querySelector('strong');
-    if (!strong) return;
-    if (strong.textContent.trim() === 'STT') {
+    const span = block.querySelector('span');
+    if (strong && strong.textContent.trim() === 'STT') {
       strong.textContent = 'ASR';
-      const span = block.querySelector('span');
       if (span && /скоро/i.test(span.textContent)) {
         span.textContent = 'скоро будет';
       }
@@ -177,6 +313,16 @@ function patchShellNavigation() {
       summary.textContent = summary.textContent.replace('STT', 'ASR');
     }
   });
+}
+
+function setDynamicGreeting() {
+  const eyebrow = document.querySelector('.welcome-eyebrow');
+  if (!eyebrow) return;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 6 ? 'Доброй ночи' : hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
+  eyebrow.textContent = greeting;
+  eyebrow.classList.add('welcome-greeting');
 }
 
 function showPage(page, { pushState = true } = {}) {
@@ -228,7 +374,9 @@ document.querySelectorAll('[data-page-jump]').forEach((btn) => {
   });
 });
 
+injectHomeAnimations();
 patchShellNavigation();
+setDynamicGreeting();
 
 // If the page is loaded with ?page=tts or ?page=about
 const initialPage = new URL(window.location.href).searchParams.get('page') || 'main';
