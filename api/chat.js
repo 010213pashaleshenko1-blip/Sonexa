@@ -162,6 +162,17 @@ async function createGradioTask(prompt) {
     }
   }
 
+  // Если все endpoints вернули 404 — скорее всего Space не запущен
+  const all404 = attempts.every(a => a.includes("→ 404"));
+  if (all404) {
+    throw new Error(
+      `Space ${BASE} не отвечает (все endpoints вернули 404). ` +
+      `Возможно: 1) Space не запущен (paused/build error), проверь статус на huggingface.co/spaces/Cartik/Sonexa-AQ-Server. ` +
+      `2) Неверный URL Space. ` +
+      `3) Space в режиме сна (нужно "Restart" в настройках).`
+    );
+  }
+
   throw new Error(
     `Ни один Gradio endpoint не сработал. ${configInfo}. Попытки: ${attempts.join(" | ")}. Последняя ошибка: ${lastErr?.message || "unknown"}`
   );
