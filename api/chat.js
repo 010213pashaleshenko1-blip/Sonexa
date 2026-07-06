@@ -185,7 +185,7 @@ async function diagnoseSpace() {
 /**
  * POST to /call/predict с правильным ChatInterface payload.
  */
-async function createGradioTask(message, history) {
+async function createGradioTask(message, history, signal) {
   const candidates = [
     "/call/predict",
     "/gradio_api/call/predict",
@@ -196,6 +196,10 @@ async function createGradioTask(message, history) {
   let lastErr = null;
 
   for (const path of candidates) {
+    // Если уже отменено — выходим
+    if (signal?.aborted) {
+      throw new DOMException("Aborted by client", "AbortError");
+    }
     const url = `${BASE}${path}`;
     try {
       const body = JSON.stringify({
@@ -213,6 +217,7 @@ async function createGradioTask(message, history) {
         method: "POST",
         headers: authHeaders(),
         body,
+        signal,  // ← отмена пробрасывается в fetch
       });
 
       const text = await res.text();
@@ -240,6 +245,8 @@ async function createGradioTask(message, history) {
 
       return { eventId: data.event_id, path };
     } catch (e) {
+      // AbortError пробрасываем дальше (клиент отменил запрос)
+      if (e.name === "AbortError") throw e;
       attempts.push(`${path} → exception: ${e.message}`);
       lastErr = new Error(`${path} → ${e.message}`);
     }
@@ -272,8 +279,9 @@ async function createGradioTask(message, history) {
  *   event: error       data: "error message"       ← ошибка
  *
  * onChunk(content) вызывается при каждом generating событии.
+ * signal (AbortSignal) — если клиент закрыл соединение, отменяем fetch к Gradio.
  */
-async function streamGradioResult(eventId, usedPath, onChunk) {
+async function streamGradioResult(eventId, usedPath, onChunk, signal) {
   const streamPaths = [
     `${usedPath}/${eventId}`,
     `/gradio_api/call/predict/${eventId}`,
@@ -283,11 +291,17 @@ async function streamGradioResult(eventId, usedPath, onChunk) {
   let lastErr = null;
 
   for (const path of uniquePaths) {
+    // Если уже отменено клиентом — выходим сразу
+    if (signal?.aborted) {
+      throw new DOMException("Aborted by client", "AbortError");
+    }
+
     const url = `${BASE}${path}`;
     try {
       const res = await fetch(url, {
         method: "GET",
         headers: authHeaders({ "Content-Type": undefined }),
+        signal,  // ← отмена пробрасывается в fetch
       });
 
       if (res.status === 404) continue;
@@ -305,60 +319,82 @@ async function streamGradioResult(eventId, usedPath, onChunk) {
       let error = null;
       let gotAnyEvent = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      // Если клиент отменил запрос — освобождаем reader
+      const onAbort = () => {
+        try { reader.cancel(); } catch {}
+      };
+      if (signal) {
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
+      }
 
-        buffer += decoder.decode(value, { stream: true });
-        const blocks = buffer.split("\n\n");
-        buffer = blocks.pop() || "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        for (const block of blocks) {
-          gotAnyEvent = true;
-          const eventMatch = block.match(/^event:\s*(.+)$/m);
-          const dataMatch = block.match(/^data:\s*(.+)$/m);
-          const eventName = eventMatch ? eventMatch[1].trim() : null;
-          const dataStr = dataMatch ? dataMatch[1].trim() : null;
+          buffer += decoder.decode(value, { stream: true });
+          const blocks = buffer.split("\n\n");
+          buffer = blocks.pop() || "";
 
-          if (eventName === "error") {
-            error = dataStr || "unknown error";
-            break;
-          }
+          for (const block of blocks) {
+            gotAnyEvent = true;
+            const eventMatch = block.match(/^event:\s*(.+)$/m);
+            const dataMatch = block.match(/^data:\s*(.+)$/m);
+            const eventName = eventMatch ? eventMatch[1].trim() : null;
+            const dataStr = dataMatch ? dataMatch[1].trim() : null;
 
-          if (eventName === "generating" && dataStr) {
-            // Промежуточный результат — стримим!
-            try {
-              const payload = JSON.parse(dataStr);
-              if (Array.isArray(payload) && payload.length > 0) {
-                const content = payload[0];
-                if (typeof content === "string" && content) {
-                  onChunk(content);
-                }
-              }
-            } catch {
-              // payload может быть невалидным JSON на промежуточных шагах — игнорируем
+            if (eventName === "error") {
+              error = dataStr || "unknown error";
+              break;
             }
-          }
 
-          if (eventName === "complete") {
-            if (!dataStr) {
-              result = "";
-            } else {
+            if (eventName === "generating" && dataStr) {
+              // Промежуточный результат — стримим!
               try {
                 const payload = JSON.parse(dataStr);
                 if (Array.isArray(payload) && payload.length > 0) {
-                  result = payload[0];
-                } else {
-                  result = String(payload);
+                  const content = payload[0];
+                  if (typeof content === "string" && content) {
+                    onChunk(content);
+                  }
                 }
               } catch {
-                result = dataStr;
+                // payload может быть невалидным JSON на промежуточных шагах — игнорируем
               }
             }
-            break;
+
+            if (eventName === "complete") {
+              if (!dataStr) {
+                result = "";
+              } else {
+                try {
+                  const payload = JSON.parse(dataStr);
+                  if (Array.isArray(payload) && payload.length > 0) {
+                    result = payload[0];
+                  } else {
+                    result = String(payload);
+                  }
+                } catch {
+                  result = dataStr;
+                }
+              }
+              break;
+            }
           }
+          if (error || result !== null) break;
         }
-        if (error || result !== null) break;
+      } finally {
+        // Снимаем listener чтобы не было утечки
+        if (signal) {
+          signal.removeEventListener("abort", onAbort);
+        }
+        try { reader.releaseLock(); } catch {}
+      }
+
+      // Если был abort — выбрасываем ошибку
+      if (signal?.aborted) {
+        throw new DOMException("Aborted by client", "AbortError");
       }
 
       if (!gotAnyEvent) {
@@ -373,6 +409,8 @@ async function streamGradioResult(eventId, usedPath, onChunk) {
       }
       return result;
     } catch (e) {
+      // Если это AbortError — пробрасываем дальше
+      if (e.name === "AbortError") throw e;
       lastErr = e;
     }
   }
@@ -411,8 +449,22 @@ export default async function handler(req, res) {
   res.flushHeaders?.();
 
   function send(obj) {
-    res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    // Если соединение уже закрыто — не пишем
+    if (res.writableEnded || res.destroyed) return;
+    try {
+      res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    } catch {}
   }
+
+  // Server-side AbortController — срабатывает когда клиент закрыл соединение
+  // (нажал Stop в UI → fetch.abort() → Vercel закрывает req)
+  const serverAbort = new AbortController();
+  let clientDisconnected = false;
+
+  req.on("close", () => {
+    clientDisconnected = true;
+    serverAbort.abort();
+  });
 
   try {
     // Явно сообщаем клиенту, что токен настроен (для отладки)
@@ -424,21 +476,34 @@ export default async function handler(req, res) {
       throw new Error("Не найдено user-сообщение для отправки");
     }
 
-    // Создаём задачу
-    const { eventId, path: usedPath } = await createGradioTask(message, history);
+    // Создаём задачу (POST к Gradio)
+    const { eventId, path: usedPath } = await createGradioTask(
+      message, history, serverAbort.signal
+    );
+
+    // Если клиент уже отключился во время POST — не продолжаем
+    if (clientDisconnected) {
+      // Gradio задача уже создана и будет генерировать, но мы не будем её читать
+      // (Gradio сам завершит генерацию когда поймёт, что stream не запрашивается)
+      return;
+    }
 
     // Стримим результат: каждый generating-чанк сразу отправляем клиенту
     let lastSentContent = "";
     let finalContent = "";
 
-    finalContent = await streamGradioResult(eventId, usedPath, (content) => {
-      // Gradio отдаёт накопленный контент (всё больше и больше)
-      // Отправляем только если контент изменился
-      if (content !== lastSentContent) {
-        lastSentContent = content;
-        send({ status: "chunk", content });
-      }
-    });
+    finalContent = await streamGradioResult(
+      eventId,
+      usedPath,
+      (content) => {
+        // Gradio отдаёт накопленный контент (всё больше и больше)
+        if (content !== lastSentContent) {
+          lastSentContent = content;
+          send({ status: "chunk", content });
+        }
+      },
+      serverAbort.signal  // ← отмена пробрасывается в Gradio fetch
+    );
 
     // Финальный ответ
     const finalText = finalContent || lastSentContent;
@@ -448,8 +513,14 @@ export default async function handler(req, res) {
 
     send({ status: "done", content: finalText });
   } catch (err) {
+    // Если клиент отключился — не отправляем ошибку (соединение уже закрыто)
+    if (clientDisconnected || err.name === "AbortError") {
+      return;
+    }
     send({ status: "error", error: err.message || "Unknown error" });
   } finally {
-    res.end();
+    if (!res.writableEnded) {
+      try { res.end(); } catch {}
+    }
   }
 }
