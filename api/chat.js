@@ -1,28 +1,22 @@
 /**
- * Sonexa Assistant — chat API (Gradio SSE streaming)
+ * Sonexa Assistant — chat API (Gradio ChatInterface SSE streaming)
  *
- * Endpoint:
- *   POST /api/chat
- *     { messages: [{role, content}] }
- *     → text/event-stream
- *       data: {"status":"started"}
- *       data: {"status":"chunk","content":"накопленный текст"}
- *       ...
- *       data: {"status":"done","content":"полный текст"}
- *
- * Backend: приватный HF Space Cartik/Sonexa-AQ-Server (Gradio API)
+ * Backend: приватный HF Space Cartik/Sonexa-AQ-Server
  * URL: https://cartik-sonexa-aq-server.hf.space
  *
+ * Space использует gr.ChatInterface с api_name="predict":
+ *   def respond(message, history, system_message, max_tokens, temperature, top_p)
+ *
+ * Поэтому payload для /call/predict:
+ *   data: [message_string, [[user, bot], ...], system_string, max_tokens, temperature, top_p]
+ *
  * Стратегия:
- *   1. POST {BASE}/gradio_api/call/predict  (с Authorization: Bearer HF_TOKEN)
- *      body: { data: [prompt_string] }
+ *   1. POST {BASE}/call/predict с Authorization: Bearer HF_TOKEN
+ *      body: { data: [message, history, system_msg, 512, 0.7, 0.9] }
  *      → { event_id }
- *   2. GET {BASE}/gradio_api/call/predict/{event_id}  (с Authorization)
+ *   2. GET {BASE}/call/predict/{event_id} (с Authorization)
  *      → SSE stream, ждём event: complete
  *      data: [response_text]
- *
- * Fallback paths: пробуем /gradio_api/call/predict → /call/predict → /api/predict
- * (разные версии Gradio используют разные пути)
  */
 
 const HF_TOKEN = process.env.HF_TOKEN || "";
@@ -52,84 +46,78 @@ function authHeaders(extra = {}) {
   return h;
 }
 
-function buildPromptFromMessages(messages) {
-  const lines = [];
-  lines.push(`[SYSTEM] ${SYSTEM_PROMPT}`);
-  for (const m of messages) {
+/**
+ * Преобразуем наши messages [{role, content}] в Gradio history format:
+ * [[user_msg, bot_msg], [user_msg, bot_msg], ...]
+ * Последнее user-сообщение становится message-аргументом.
+ */
+function convertMessagesToGradio(messages) {
+  const history = [];
+  let lastUserMessage = "";
+
+  // Фильтруем только user/assistant
+  const filtered = messages.filter(m => m.role === "user" || m.role === "assistant");
+
+  // Идём парами: user + assistant
+  for (let i = 0; i < filtered.length; i++) {
+    const m = filtered[i];
     if (m.role === "user") {
-      lines.push(`[USER] ${m.content}`);
-    } else if (m.role === "assistant") {
-      lines.push(`[ASSISTANT] ${m.content}`);
+      // Если следующее — assistant, образуют пару
+      if (i + 1 < filtered.length && filtered[i + 1].role === "assistant") {
+        history.push([m.content, filtered[i + 1].content]);
+        i++; // пропускаем assistant
+      } else {
+        // User без ответа — это текущее сообщение
+        lastUserMessage = m.content;
+      }
     }
   }
-  lines.push("[ASSISTANT]");
-  return lines.join("\n");
-}
 
-/**
- * Получаем конфиг Gradio Space — там указаны все доступные API endpoints
- * и их fn_index. Это помогает понять, какой endpoint использовать.
- */
-async function getGradioConfig() {
-  const configPaths = ["/config", "/gradio_api/config"];
-  for (const path of configPaths) {
-    try {
-      const res = await fetch(`${BASE}${path}`, {
-        method: "GET",
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return { path, data };
-      }
-    } catch {}
+  // Если последнее сообщение — user без пары, это наш message
+  if (filtered.length > 0 && filtered[filtered.length - 1].role === "user") {
+    lastUserMessage = filtered[filtered.length - 1].content;
+    // Убираем его из history (он уже в history как непарный — нужно убрать)
+    // На самом деле, в нашем цикле он не попал в history (т.к. нет следующего assistant)
+    // так что lastUserMessage уже установлен корректно
   }
-  return null;
+
+  // Если history содержит lastUserMessage как непарный — оставляем только пары
+  // (наш цикл уже это сделал правильно)
+
+  return { message: lastUserMessage, history };
 }
 
 /**
- * Пробуем разные варианты Gradio API paths.
- * Сначала пытаемся получить /config и прочитать имена endpoints оттуда.
+ * POST to /call/predict с правильным ChatInterface payload.
  */
-async function createGradioTask(prompt) {
-  // Сначала пробуем получить config и найти имя endpoint'а
-  const config = await getGradioConfig();
-  let candidates = [
-    "/gradio_api/call/predict",
+async function createGradioTask(message, history) {
+  const candidates = [
     "/call/predict",
+    "/gradio_api/call/predict",
     "/api/predict",
-    "/run/predict",
   ];
-
-  if (config?.data) {
-    // Gradio config содержит dependencies с api_name
-    const cfg = config.data;
-    if (cfg.dependencies) {
-      const apiNames = cfg.dependencies
-        .filter((d) => d && d.api_name)
-        .map((d) => d.api_name);
-      // Добавляем пути вида /gradio_api/call/{api_name}, /call/{api_name}
-      for (const name of apiNames) {
-        candidates.unshift(`/gradio_api/call${name}`);
-        candidates.unshift(`/call${name}`);
-      }
-    }
-  }
-
-  // Убираем дубликаты
-  candidates = [...new Set(candidates)];
 
   const attempts = [];
   let lastErr = null;
-  let configInfo = config ? `config path: ${config.path}` : "config: not found";
 
   for (const path of candidates) {
     const url = `${BASE}${path}`;
     try {
+      const body = JSON.stringify({
+        data: [
+          message,           // message: str
+          history,           // history: [[user, bot], ...]
+          SYSTEM_PROMPT,     // system_message: str
+          512,               // max_tokens
+          0.7,               // temperature
+          0.9,               // top_p
+        ],
+      });
+
       const res = await fetch(url, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ data: [prompt] }),
+        body,
       });
 
       const text = await res.text();
@@ -138,7 +126,7 @@ async function createGradioTask(prompt) {
       if (res.status === 404) continue;
 
       if (!res.ok) {
-        lastErr = new Error(`${path} → HTTP ${res.status}: ${text.slice(0, 200)}`);
+        lastErr = new Error(`${path} → HTTP ${res.status}: ${text.slice(0, 300)}`);
         continue;
       }
 
@@ -146,50 +134,44 @@ async function createGradioTask(prompt) {
       try {
         data = JSON.parse(text);
       } catch {
-        lastErr = new Error(`${path} → невалидный JSON: ${text.slice(0, 200)}`);
+        lastErr = new Error(`${path} → невалидный JSON: ${text.slice(0, 300)}`);
         continue;
       }
 
       if (!data.event_id) {
-        lastErr = new Error(`${path} → нет event_id: ${JSON.stringify(data).slice(0, 200)}`);
+        lastErr = new Error(`${path} → нет event_id: ${JSON.stringify(data).slice(0, 300)}`);
         continue;
       }
 
-      return { eventId: data.event_id, path, attempts };
+      return { eventId: data.event_id, path };
     } catch (e) {
       attempts.push(`${path} → exception: ${e.message}`);
       lastErr = new Error(`${path} → ${e.message}`);
     }
   }
 
-  // Если все endpoints вернули 404 — скорее всего Space не запущен
   const all404 = attempts.every(a => a.includes("→ 404"));
   if (all404) {
     throw new Error(
       `Space ${BASE} не отвечает (все endpoints вернули 404). ` +
-      `Возможно: 1) Space не запущен (paused/build error), проверь статус на huggingface.co/spaces/Cartik/Sonexa-AQ-Server. ` +
-      `2) Неверный URL Space. ` +
-      `3) Space в режиме сна (нужно "Restart" в настройках).`
+      `Проверь, что Space запущен (Running) на huggingface.co/spaces/Cartik/Sonexa-AQ-Server. ` +
+      `Попытки: ${attempts.join(" | ")}`
     );
   }
 
   throw new Error(
-    `Ни один Gradio endpoint не сработал. ${configInfo}. Попытки: ${attempts.join(" | ")}. Последняя ошибка: ${lastErr?.message || "unknown"}`
+    `Gradio API не сработал. Попытки: ${attempts.join(" | ")}. Последняя ошибка: ${lastErr?.message || "unknown"}`
   );
 }
 
 /**
  * Читает SSE-стрим Gradio и ждёт событие complete.
- * Пробуем path по умолчанию + варианты.
  */
 async function waitForGradioResult(eventId, usedPath) {
-  // Строим варианты stream URLs на основе использованного POST path
   const streamPaths = [
     `${usedPath}/${eventId}`,
     `/gradio_api/call/predict/${eventId}`,
-    `/call/predict/${eventId}`,
   ];
-  // Убираем дубликаты
   const uniquePaths = [...new Set(streamPaths)];
 
   let lastErr = null;
@@ -210,7 +192,6 @@ async function waitForGradioResult(eventId, usedPath) {
         continue;
       }
 
-      // Читаем SSE поток
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -257,7 +238,6 @@ async function waitForGradioResult(eventId, usedPath) {
       }
 
       if (!gotAnyEvent) {
-        // Поток пустой — пробуем следующий path
         lastErr = new Error(`${path} → пустой SSE поток`);
         continue;
       }
@@ -274,7 +254,7 @@ async function waitForGradioResult(eventId, usedPath) {
   }
 
   throw new Error(
-    `Не удалось получить результат Gradio. Последняя ошибка: ${lastErr?.message || "unknown"}`
+    `Не удалось получить результат. Последняя ошибка: ${lastErr?.message || "unknown"}`
   );
 }
 
@@ -313,8 +293,16 @@ export default async function handler(req, res) {
   try {
     send({ status: "started", model: "sonexa" });
 
-    const prompt = buildPromptFromMessages(messages);
-    const { eventId, path: usedPath } = await createGradioTask(prompt);
+    // Преобразуем messages → Gradio format
+    const { message, history } = convertMessagesToGradio(messages);
+    if (!message) {
+      throw new Error("Не найдено user-сообщение для отправки");
+    }
+
+    // Создаём задачу
+    const { eventId, path: usedPath } = await createGradioTask(message, history);
+
+    // Ждём результат
     const fullText = await waitForGradioResult(eventId, usedPath);
 
     if (!fullText || !fullText.trim()) {
