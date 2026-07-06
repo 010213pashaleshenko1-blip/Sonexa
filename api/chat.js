@@ -19,7 +19,7 @@
  *      data: [response_text]
  */
 
-const HF_TOKEN = process.env.HF_TOKEN || "";
+const HF_TOKEN = (process.env.HF_TOKEN || "").trim();
 const BASE = "https://cartik-sonexa-aq-server.hf.space";
 
 const SYSTEM_PROMPT = `Ты — Sonexa Assistant, дружелюбный ИИ-помощник в одноимённом приложении для синтеза речи (TTS).
@@ -88,33 +88,92 @@ function convertMessagesToGradio(messages) {
 }
 
 /**
+ * Проверяем валидность HF_TOKEN через HF whoami API.
+ * Также проверяем, есть ли у токена доступ к конкретному Space.
+ */
+async function verifyToken() {
+  const result = { valid: false, user: null, spaceAccess: null, error: null };
+
+  // 1. Проверяем токен через whoami
+  try {
+    const res = await fetch("https://huggingface.co/api/whoami-v2", {
+      headers: { "Authorization": `Bearer ${HF_TOKEN.trim()}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      result.valid = true;
+      result.user = data.name || data.fullname || "unknown";
+    } else {
+      result.error = `whoami → ${res.status}`;
+      return result;
+    }
+  } catch (e) {
+    result.error = `whoami exception: ${e.message}`;
+    return result;
+  }
+
+  // 2. Проверяем доступ к Space
+  try {
+    const res = await fetch(`https://huggingface.co/api/spaces/Cartik/Sonexa-AQ-Server`, {
+      headers: { "Authorization": `Bearer ${HF_TOKEN.trim()}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      result.spaceAccess = {
+        status: "ok",
+        runtime: data.runtime?.stage || "unknown",
+        hardware: data.runtime?.hardware?.current || "unknown",
+      };
+    } else {
+      result.spaceAccess = { status: `error ${res.status}` };
+    }
+  } catch (e) {
+    result.spaceAccess = { status: `exception: ${e.message}` };
+  }
+
+  return result;
+}
+
+/**
  * Диагностика: проверяем, что HF_TOKEN доходит до Space.
- * Делаём GET запрос на /gradio_api/heartbeat или /config с токеном
- * и смотрим, что отвечает Space.
  */
 async function diagnoseSpace() {
+  // Сначала проверяем токен через HF API
+  const tokenInfo = await verifyToken();
+
   const diagPaths = [
     "/gradio_api/heartbeat",
-    "/heartbeat",
     "/config",
     "/",
   ];
-  const results = [];
+  const results = [
+    `token: ${tokenInfo.valid ? `valid (${tokenInfo.user})` : `INVALID (${tokenInfo.error})`}`,
+    `space: ${tokenInfo.spaceAccess ? JSON.stringify(tokenInfo.spaceAccess) : "no info"}`,
+  ];
 
   for (const path of diagPaths) {
     try {
+      // Пробуем с Authorization header
       const res = await fetch(`${BASE}${path}`, {
         method: "GET",
-        headers: authHeaders(),
-        redirect: "manual",
+        headers: { "Authorization": `Bearer ${HF_TOKEN.trim()}` },
       });
-      const text = await res.text();
+      const body = await res.text();
+      const isHtml404 = body.includes("<!DOCTYPE html>") && res.status === 404;
       results.push(
-        `${path} → ${res.status} (token ${HF_TOKEN ? "set" : "MISSING"})` +
-        (res.status !== 200 ? `, body: ${text.slice(0, 150)}` : "")
+        `${path} → ${res.status}${isHtml404 ? " (HF 404 page)" : ""}` +
+        (res.status !== 200 ? `, body[0:80]: ${body.slice(0, 80)}` : "")
       );
-      // Если хотя бы один endpoint отвечает 200 — Space жив
       if (res.status === 200) break;
+
+      // Если 404 — пробуем с ?token= query param (альтернативный метод)
+      if (res.status === 404) {
+        const res2 = await fetch(`${BASE}${path}?token=${encodeURIComponent(HF_TOKEN.trim())}`, {
+          method: "GET",
+        });
+        results.push(`${path}?token=... → ${res2.status}`);
+        if (res2.status === 200) break;
+      }
     } catch (e) {
       results.push(`${path} → exception: ${e.message}`);
     }
