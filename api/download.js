@@ -1,15 +1,21 @@
 /**
- * Sonexa — audio download proxy
+ * Sonexa — audio proxy
  *
  * GET /api/download?url=<audio_url>
  *
- * Проксирует аудиофайл с Gradio Space (кросс-доменный) через наш сервер,
- * чтобы обойти CORS и добавить Content-Disposition: attachment.
+ * Проксирует аудиофайл с Gradio Space (кросс-доменный) через наш сервер.
+ * Решает две проблемы:
+ *   1. CORS — Gradio не отдаёт Access-Control-Allow-Origin
+ *   2. Доступность в России — *.hf.space домены часто блокируются,
+ *      а Vercel работает стабильно
  *
- * Это позволяет браузеру корректно скачивать файл вместо открытия в новой вкладке.
+ * Поддержка:
+ *   - Range requests (для <audio> стриминга и перемотки)
+ *   - Content-Disposition: attachment (для скачивания)
+ *   - Передача Content-Type и Content-Length
+ *   - Защита от SSRF (только разрешённые домены)
  *
- * Безопасность: разрешаем только URL с домена cartik-sonexa-1-server.hf.space
- * (защита от SSRF — нельзя использовать прокси для произвольных URL).
+ * Параметр ?download=1 форсирует attachment (для кнопки "Скачать")
  */
 
 const ALLOWED_HOSTS = [
@@ -18,11 +24,11 @@ const ALLOWED_HOSTS = [
 ];
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "HEAD") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { url } = req.query;
+  const { url, download } = req.query;
   if (!url) {
     return res.status(400).json({ error: "url parameter required" });
   }
@@ -42,52 +48,91 @@ export default async function handler(req, res) {
   }
 
   try {
-    const audioRes = await fetch(url, {
-      headers: {
-        // Gradio иногда требует Authorization для приватных Spaces
-        // Для TTS Space (публичный) не нужно, но добавим на всякий случай
-        ...(process.env.HF_TOKEN
-          ? { Authorization: `Bearer ${process.env.HF_TOKEN.trim()}` }
-          : {}),
-      },
-    });
+    // Пробрасываем Range header для стриминга
+    const upstreamHeaders = {
+      ...(process.env.HF_TOKEN
+        ? { Authorization: `Bearer ${process.env.HF_TOKEN.trim()}` }
+        : {}),
+    };
+    if (req.headers.range) {
+      upstreamHeaders["Range"] = req.headers.range;
+    }
 
-    if (!audioRes.ok) {
+    const audioRes = await fetch(url, { headers: upstreamHeaders });
+
+    if (!audioRes.ok && audioRes.status !== 206) {
       return res.status(audioRes.status).json({
         error: `Failed to fetch audio: HTTP ${audioRes.status}`,
       });
     }
 
     // Определяем Content-Type и расширение
-    const contentType = audioRes.headers.get("content-type") || "audio/mpeg";
-    let ext = "mp3";
+    const contentType =
+      audioRes.headers.get("content-type") || "audio/wav";
+    let ext = "wav";
     if (contentType.includes("wav")) ext = "wav";
     else if (contentType.includes("mpeg") || contentType.includes("mp3")) ext = "mp3";
     else if (contentType.includes("ogg")) ext = "ogg";
     else if (contentType.includes("webm")) ext = "webm";
     else {
-      // Проверим расширение в URL
       const urlExt = parsedUrl.pathname.match(/\.(\w{3,4})$/)?.[1]?.toLowerCase();
       if (["wav", "mp3", "ogg", "webm", "m4a", "flac"].includes(urlExt)) {
         ext = urlExt;
       }
     }
 
-    const filename = `sonexa-speech-${Date.now()}.${ext}`;
-
-    // Прокидываем аудио как blob
-    const buffer = Buffer.from(await audioRes.arrayBuffer());
+    // Пробрасываем важные заголовки от upstream
+    const headersToForward = [
+      "content-length",
+      "content-range",
+      "accept-ranges",
+      "last-modified",
+      "etag",
+    ];
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length.toString());
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Accept-Ranges", "bytes");
+    for (const h of headersToForward) {
+      const v = audioRes.headers.get(h);
+      if (v) res.setHeader(h, v);
+    }
 
-    return res.status(200).send(buffer);
+    // Content-Disposition: attachment если ?download=1, иначе inline (для <audio>)
+    if (download === "1") {
+      const filename = `sonexa-speech-${Date.now()}.${ext}`;
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+    } else {
+      res.setHeader("Content-Disposition", `inline; filename="audio.${ext}"`);
+    }
+
+    res.setHeader("Cache-Control", "public, max-age=3600");
+
+    // Статус: 200 или 206 (Partial Content для Range)
+    res.status(audioRes.status);
+
+    // Стримим тело ответа
+    if (audioRes.body) {
+      const reader = audioRes.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+    } else {
+      const buffer = Buffer.from(await audioRes.arrayBuffer());
+      res.send(buffer);
+    }
   } catch (err) {
     console.error("Download proxy error:", err);
-    return res.status(500).json({
-      error: err.message || "Download failed",
-    });
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: err.message || "Download failed",
+      });
+    }
+    res.end();
   }
 }

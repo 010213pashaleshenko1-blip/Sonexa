@@ -631,24 +631,25 @@ if (textInput && generateBtn && voiceSelect) {
     `;
 
     try {
-      // Используем наш прокси /api/download — он обходит CORS и ставит
-      // Content-Disposition: attachment, что форсирует скачивание.
-      // Браузер сам определит расширение из Content-Type.
-      const proxyUrl = `/api/download?url=${encodeURIComponent(audioElement.src)}`;
+      // audioElement.src уже указывает на /api/download?url=...
+      // Добавляем ?download=1 чтобы сервер отдал Content-Disposition: attachment
+      // (без этого <audio> играет, но не скачивается)
+      let downloadUrl = audioElement.src;
+      // Если уже есть ?url=... — добавляем &download=1, иначе ?download=1
+      downloadUrl += (downloadUrl.includes('?') ? '&' : '?') + 'download=1';
 
-      // Простой способ: создаём <a> и кликаем — браузер скачает через прокси
       const link = document.createElement('a');
-      link.href = proxyUrl;
+      link.href = downloadUrl;
       link.download = `sonexa-speech-${Date.now()}.wav`;
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch (err) {
       console.error('Download failed:', err);
-      // Fallback: открываем в новой вкладке (хоть так)
+      // Fallback: открываем в новой вкладке
       window.open(audioElement.src, '_blank');
     } finally {
-      // Возвращаем кнопку через 1.5с (даём время на старт скачивания)
+      // Возвращаем кнопку через 1.5с
       setTimeout(() => {
         downloadBtn.disabled = false;
         downloadBtn.innerHTML = originalHTML;
@@ -660,7 +661,9 @@ if (textInput && generateBtn && voiceSelect) {
     if (!audioElement?.src) return;
     const originalHTML = copyUrlBtn.innerHTML;
     try {
-      await navigator.clipboard.writeText(audioElement.src);
+      // Копируем абсолютный URL (с доменом), чтобы ссылкой можно было поделиться
+      const absoluteUrl = new URL(audioElement.src, window.location.origin).href;
+      await navigator.clipboard.writeText(absoluteUrl);
       copyUrlBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">&#10003;</span> Скопировано!';
       setTimeout(() => { copyUrlBtn.innerHTML = originalHTML; }, 1800);
     } catch {

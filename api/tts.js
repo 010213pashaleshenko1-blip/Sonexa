@@ -4,6 +4,15 @@ export default async function handler(req, res) {
   }
 
   const BASE = "https://cartik-sonexa-1-server.hf.space";
+  // Таймаут 60с — Gradio Space может "просыпаться" при первом запросе
+  const FETCH_TIMEOUT_MS = 60000;
+
+  function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    return fetch(url, { ...options, signal: controller.signal })
+      .finally(() => clearTimeout(timeout));
+  }
 
   try {
     const { text, voice } = req.body || {};
@@ -19,7 +28,7 @@ export default async function handler(req, res) {
     };
 
     // Создаем задачу
-    const postRes = await fetch(`${BASE}/gradio_api/call/predict`, {
+    const postRes = await fetchWithTimeout(`${BASE}/gradio_api/call/predict`, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -44,12 +53,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Ждем результат
-    const streamRes = await fetch(
+    // Ждем результат (увеличенный таймаут для cold start Space)
+    const streamRes = await fetchWithTimeout(
       `${BASE}/gradio_api/call/predict/${event_id}`,
-      {
-        method: "GET"
-      }
+      { method: "GET" }
     );
 
     if (!streamRes.ok) {
@@ -88,14 +95,22 @@ export default async function handler(req, res) {
 
     const file = payload[0];
 
-    const url =
+    const originalUrl =
       typeof file === "string"
         ? `${BASE}/gradio_api/file=${file}`
         : file.url ||
           `${BASE}/gradio_api/file=${file.path}`;
 
+    // Важно: возвращаем URL на НАШ домен (/api/download), а не напрямую на Gradio.
+    // Gradio Space (*.hf.space) часто блокируется или медленно грузится из России,
+    // а Vercel-домен работает стабильно.
+    // Фронтенд использует этот URL для <audio src> и для скачивания.
+    const proxyUrl = `/api/download?url=${encodeURIComponent(originalUrl)}`;
+
     return res.status(200).json({
-      audio_url: url
+      audio_url: proxyUrl,
+      // Оригинальный URL — на случай если прокси упадёт (фронтенд может сделать fallback)
+      original_url: originalUrl,
     });
 
   } catch (e) {
