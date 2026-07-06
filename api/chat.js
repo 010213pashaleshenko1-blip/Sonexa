@@ -88,6 +88,42 @@ function convertMessagesToGradio(messages) {
 }
 
 /**
+ * Диагностика: проверяем, что HF_TOKEN доходит до Space.
+ * Делаём GET запрос на /gradio_api/heartbeat или /config с токеном
+ * и смотрим, что отвечает Space.
+ */
+async function diagnoseSpace() {
+  const diagPaths = [
+    "/gradio_api/heartbeat",
+    "/heartbeat",
+    "/config",
+    "/",
+  ];
+  const results = [];
+
+  for (const path of diagPaths) {
+    try {
+      const res = await fetch(`${BASE}${path}`, {
+        method: "GET",
+        headers: authHeaders(),
+        redirect: "manual",
+      });
+      const text = await res.text();
+      results.push(
+        `${path} → ${res.status} (token ${HF_TOKEN ? "set" : "MISSING"})` +
+        (res.status !== 200 ? `, body: ${text.slice(0, 150)}` : "")
+      );
+      // Если хотя бы один endpoint отвечает 200 — Space жив
+      if (res.status === 200) break;
+    } catch (e) {
+      results.push(`${path} → exception: ${e.message}`);
+    }
+  }
+
+  return results;
+}
+
+/**
  * POST to /call/predict с правильным ChatInterface payload.
  */
 async function createGradioTask(message, history) {
@@ -152,10 +188,14 @@ async function createGradioTask(message, history) {
 
   const all404 = attempts.every(a => a.includes("→ 404"));
   if (all404) {
+    // Запускаем диагностику, чтобы понять, что происходит с Space
+    const diagResults = await diagnoseSpace();
     throw new Error(
-      `Space ${BASE} не отвечает (все endpoints вернули 404). ` +
-      `Проверь, что Space запущен (Running) на huggingface.co/spaces/Cartik/Sonexa-AQ-Server. ` +
-      `Попытки: ${attempts.join(" | ")}`
+      `Space ${BASE} не отвечает на API endpoints (все predict вернули 404). ` +
+      `Диагностика: [${diagResults.join(" | ")}]. ` +
+      `Если даже /gradio_api/heartbeat возвращает 404 — Space сломан (модель не загрузилась). ` +
+      `Зайди на huggingface.co/spaces/Cartik/Sonexa-AQ-Server и проверь логи в "Logs". ` +
+      `Возможные причины: 1) Модель не загрузилась (OOM), 2) Build error, 3) Space paused.`
     );
   }
 
@@ -270,7 +310,7 @@ export default async function handler(req, res) {
 
   if (!HF_TOKEN) {
     return res.status(500).json({
-      error: "HF_TOKEN не настроен на сервере. Добавь его в Vercel Environment Variables.",
+      error: "HF_TOKEN не настроен на сервере. Добавь его в Vercel Environment Variables (Settings → Environment Variables → HF_TOKEN).",
     });
   }
 
@@ -291,7 +331,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    send({ status: "started", model: "sonexa" });
+    // Явно сообщаем клиенту, что токен настроен (для отладки)
+    send({ status: "started", model: "sonexa", tokenConfigured: true });
 
     // Преобразуем messages → Gradio format
     const { message, history } = convertMessagesToGradio(messages);
