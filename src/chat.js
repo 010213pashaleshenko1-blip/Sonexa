@@ -29,6 +29,7 @@
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
   const sendBtn = document.getElementById('chat-send');
+  const stopBtn = document.getElementById('chat-stop');
   const currentNameEl = document.getElementById('chat-current-name');
 
   // State
@@ -315,6 +316,14 @@
   function updateSendButton() {
     const hasText = input.value.trim().length > 0;
     sendBtn.disabled = !hasText || isStreaming;
+    // Показываем stop вместо send во время стриминга
+    if (isStreaming) {
+      sendBtn.style.display = 'none';
+      stopBtn.style.display = 'grid';
+    } else {
+      sendBtn.style.display = 'grid';
+      stopBtn.style.display = 'none';
+    }
   }
 
   /* ---------- Send message + streaming ---------- */
@@ -345,29 +354,57 @@
     updateSendButton();
     input.disabled = true;
 
+    // Создаём AbortController для возможности остановки
+    abortController = new AbortController();
+
     // Создаём placeholder для assistant
     const assistantContentEl = appendMessageEl('assistant', '', { streaming: true });
     assistantContentEl.innerHTML = '<div class="chat-typing"><span></span><span></span><span></span></div>';
 
+    let lastStreamedContent = '';
+
     try {
-      await streamAssistantResponse(chat, assistantContentEl);
-    } catch (err) {
-      assistantContentEl.classList.remove('is-streaming');
-      assistantContentEl.innerHTML = `<span style="color:var(--error)">⚠ Ошибка: ${escapeHTML(err.message || 'неизвестная')}</span>`;
-      chat.messages.push({
-        role: 'assistant',
-        content: `⚠ Ошибка: ${err.message || 'неизвестная'}`,
+      await streamAssistantResponse(chat, assistantContentEl, abortController.signal, (content) => {
+        lastStreamedContent = content;
       });
-      saveChats();
+    } catch (err) {
+      // Если пользователь отменил — сохраняем то, что уже пришло
+      if (err.name === 'AbortError' || err.message === 'Aborted by user') {
+        assistantContentEl.classList.remove('is-streaming');
+        if (lastStreamedContent) {
+          assistantContentEl.innerHTML = formatMessage(lastStreamedContent) +
+            '<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary);font-style:italic">⏹ Остановлено</div>';
+          chat.messages.push({ role: 'assistant', content: lastStreamedContent });
+          saveChats();
+        } else {
+          assistantContentEl.innerHTML = '<div style="color:var(--text-tertiary);font-style:italic">⏹ Запрос остановлен</div>';
+        }
+      } else {
+        assistantContentEl.classList.remove('is-streaming');
+        assistantContentEl.innerHTML = `<span style="color:var(--error)">⚠ Ошибка: ${escapeHTML(err.message || 'неизвестная')}</span>`;
+        chat.messages.push({
+          role: 'assistant',
+          content: `⚠ Ошибка: ${err.message || 'неизвестная'}`,
+        });
+        saveChats();
+      }
     } finally {
       isStreaming = false;
+      abortController = null;
       input.disabled = false;
       updateSendButton();
       input.focus();
     }
   }
 
-  async function streamAssistantResponse(chat, contentEl) {
+  /* ---------- Stop streaming ---------- */
+  function stopStreaming() {
+    if (abortController) {
+      abortController.abort();
+    }
+  }
+
+  async function streamAssistantResponse(chat, contentEl, signal, onContent) {
     // Используем fetch с потоковым чтением (SSE)
     const res = await fetch('/api/chat', {
       method: 'POST',
@@ -377,6 +414,7 @@
         temperature: 0.7,
         max_tokens: 1024,
       }),
+      signal,
     });
 
     if (!res.ok) {
@@ -399,6 +437,11 @@
     let buffer = '';
     let fullContent = '';
     let gotFirstChunk = false;
+
+    // Обработка abort — освобождаем reader
+    signal?.addEventListener('abort', () => {
+      try { reader.cancel(); } catch {}
+    });
 
     while (true) {
       const { done, value } = await reader.read();
@@ -432,14 +475,22 @@
           fullContent = data.content || '';
           contentEl.innerHTML = formatMessage(fullContent);
           scrollToBottom();
+          // Сообщаем вызывающему коду текущий контент (для abort)
+          onContent?.(fullContent);
         }
 
         if (data.status === 'done') {
           fullContent = data.content || fullContent;
           contentEl.innerHTML = formatMessage(fullContent);
           contentEl.classList.remove('is-streaming');
+          onContent?.(fullContent);
         }
       }
+    }
+
+    // Если был abort — бросаем ошибку, чтобы sendMessage обработал
+    if (signal?.aborted) {
+      throw new DOMException('Aborted by user', 'AbortError');
     }
 
     // Обрабатываем оставшийся буфер
@@ -449,6 +500,7 @@
         if (data.status === 'done' && data.content) {
           fullContent = data.content;
           contentEl.innerHTML = formatMessage(fullContent);
+          onContent?.(fullContent);
         }
       } catch {}
     }
@@ -470,6 +522,7 @@
   /* ---------- Event listeners ---------- */
   fab.addEventListener('click', togglePanel);
   switcherToggle.addEventListener('click', toggleSwitcher);
+  stopBtn.addEventListener('click', stopStreaming);
   newChatBtn.addEventListener('click', () => {
     createChat();
     closeSwitcher();

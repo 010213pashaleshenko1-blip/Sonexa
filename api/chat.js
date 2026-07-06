@@ -264,9 +264,16 @@ async function createGradioTask(message, history) {
 }
 
 /**
- * Читает SSE-стрим Gradio и ждёт событие complete.
+ * Читает SSE-стрим Gradio и стримит промежуточные события клиенту.
+ *
+ * Gradio отправляет 3 типа событий:
+ *   event: generating  data: [response_so_far]   ← промежуточный (стриминг!)
+ *   event: complete    data: [final_response]      ← финальный
+ *   event: error       data: "error message"       ← ошибка
+ *
+ * onChunk(content) вызывается при каждом generating событии.
  */
-async function waitForGradioResult(eventId, usedPath) {
+async function streamGradioResult(eventId, usedPath, onChunk) {
   const streamPaths = [
     `${usedPath}/${eventId}`,
     `/gradio_api/call/predict/${eventId}`,
@@ -310,24 +317,42 @@ async function waitForGradioResult(eventId, usedPath) {
           gotAnyEvent = true;
           const eventMatch = block.match(/^event:\s*(.+)$/m);
           const dataMatch = block.match(/^data:\s*(.+)$/m);
+          const eventName = eventMatch ? eventMatch[1].trim() : null;
+          const dataStr = dataMatch ? dataMatch[1].trim() : null;
 
-          if (eventMatch && eventMatch[1].trim() === "error") {
-            error = dataMatch ? dataMatch[1].trim() : "unknown error";
+          if (eventName === "error") {
+            error = dataStr || "unknown error";
             break;
           }
-          if (eventMatch && eventMatch[1].trim() === "complete") {
-            if (!dataMatch) {
+
+          if (eventName === "generating" && dataStr) {
+            // Промежуточный результат — стримим!
+            try {
+              const payload = JSON.parse(dataStr);
+              if (Array.isArray(payload) && payload.length > 0) {
+                const content = payload[0];
+                if (typeof content === "string" && content) {
+                  onChunk(content);
+                }
+              }
+            } catch {
+              // payload может быть невалидным JSON на промежуточных шагах — игнорируем
+            }
+          }
+
+          if (eventName === "complete") {
+            if (!dataStr) {
               result = "";
             } else {
               try {
-                const payload = JSON.parse(dataMatch[1].trim());
+                const payload = JSON.parse(dataStr);
                 if (Array.isArray(payload) && payload.length > 0) {
                   result = payload[0];
                 } else {
                   result = String(payload);
                 }
               } catch {
-                result = dataMatch[1].trim();
+                result = dataStr;
               }
             }
             break;
@@ -402,23 +427,26 @@ export default async function handler(req, res) {
     // Создаём задачу
     const { eventId, path: usedPath } = await createGradioTask(message, history);
 
-    // Ждём результат
-    const fullText = await waitForGradioResult(eventId, usedPath);
+    // Стримим результат: каждый generating-чанк сразу отправляем клиенту
+    let lastSentContent = "";
+    let finalContent = "";
 
-    if (!fullText || !fullText.trim()) {
+    finalContent = await streamGradioResult(eventId, usedPath, (content) => {
+      // Gradio отдаёт накопленный контент (всё больше и больше)
+      // Отправляем только если контент изменился
+      if (content !== lastSentContent) {
+        lastSentContent = content;
+        send({ status: "chunk", content });
+      }
+    });
+
+    // Финальный ответ
+    const finalText = finalContent || lastSentContent;
+    if (!finalText || !finalText.trim()) {
       throw new Error("Модель вернула пустой ответ");
     }
 
-    // Эмуляция стриминга для UX
-    const tokens = fullText.split(/(\s+)/);
-    let accumulated = "";
-    for (let i = 0; i < tokens.length; i++) {
-      accumulated += tokens[i];
-      send({ status: "chunk", content: accumulated });
-      await new Promise(r => setTimeout(r, 35));
-    }
-
-    send({ status: "done", content: fullText });
+    send({ status: "done", content: finalText });
   } catch (err) {
     send({ status: "error", error: err.message || "Unknown error" });
   } finally {

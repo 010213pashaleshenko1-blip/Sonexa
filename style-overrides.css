@@ -1475,6 +1475,28 @@
 }
 .chat-send svg { width: 18px; height: 18px; }
 
+/* Stop button (заменяет send во время стриминга) */
+.chat-stop {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--error);
+  border: 1px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+.chat-stop:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--error);
+  transform: translateY(-1px);
+}
+.chat-stop:active { transform: translateY(0); }
+.chat-stop svg { width: 16px; height: 16px; }
+
 /* Loading dots for waiting state */
 .chat-typing {
   display: inline-flex;
