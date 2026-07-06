@@ -615,14 +615,45 @@ if (textInput && generateBtn && voiceSelect) {
     }
   });
 
-  downloadBtn?.addEventListener('click', () => {
+  downloadBtn?.addEventListener('click', async () => {
     if (!audioElement?.src) return;
-    const link = document.createElement('a');
-    link.href = audioElement.src;
-    link.download = `sonexa-speech-${Date.now()}.mp3`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+
+    // Меняем иконку/текст на "Скачивание..."
+    const originalHTML = downloadBtn.innerHTML;
+    downloadBtn.disabled = true;
+    downloadBtn.innerHTML = `
+      <span class="icon icon-sm" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+      </span>
+      Скачивание...
+    `;
+
+    try {
+      // Используем наш прокси /api/download — он обходит CORS и ставит
+      // Content-Disposition: attachment, что форсирует скачивание.
+      // Браузер сам определит расширение из Content-Type.
+      const proxyUrl = `/api/download?url=${encodeURIComponent(audioElement.src)}`;
+
+      // Простой способ: создаём <a> и кликаем — браузер скачает через прокси
+      const link = document.createElement('a');
+      link.href = proxyUrl;
+      link.download = `sonexa-speech-${Date.now()}.wav`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Download failed:', err);
+      // Fallback: открываем в новой вкладке (хоть так)
+      window.open(audioElement.src, '_blank');
+    } finally {
+      // Возвращаем кнопку через 1.5с (даём время на старт скачивания)
+      setTimeout(() => {
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = originalHTML;
+      }, 1500);
+    }
   });
 
   copyUrlBtn?.addEventListener('click', async () => {
