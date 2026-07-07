@@ -3,32 +3,20 @@
  *
  * Endpoint:
  *   POST /api/asr
- *     FormData: { audio: <file> }  (wav/mp3/ogg/webm/m4a)
+ *     FormData: { audio: <file> }
  *     → { text: "распознанный текст" }
  *
- * Backend: HF Space Cartik/Sonexa-1-ASR (Gradio API)
+ * Backend: HF Space Cartik/Sonexa-1-ASR (публичный, без токена)
  * URL: https://cartik-sonexa-1-asr.hf.space
  *
- * Стратегия (Gradio API для audio input):
- *   1. POST /gradio_api/upload — загружаем аудиофайл на Space, получаем filepath
- *   2. POST /gradio_api/call/predict — вызываем predict с data:[filepath]
- *      → { event_id }
- *   3. GET /gradio_api/call/predict/{event_id} — SSE stream, ждём complete
- *      data: [recognized_text]
- *
- * Space публичный, токен не требуется (но добавим на всякий случай).
+ * Стратегия:
+ *   1. POST /gradio_api/upload — загружаем аудио, получаем filepath
+ *   2. POST /gradio_api/call/predict с data:[filepath] → { event_id }
+ *   3. GET /gradio_api/call/predict/{event_id} → SSE stream → complete event
  */
 
 const BASE = "https://cartik-sonexa-1-asr.hf.space";
-const FETCH_TIMEOUT_MS = 90000; // ASR на CPU может быть медленным
-
-function authHeaders(extra = {}) {
-  const h = { ...extra };
-  if (process.env.HF_TOKEN) {
-    h["Authorization"] = `Bearer ${process.env.HF_TOKEN.trim()}`;
-  }
-  return h;
-}
+const FETCH_TIMEOUT_MS = 120000; // ASR на CPU может быть очень медленным
 
 function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
@@ -39,17 +27,15 @@ function fetchWithTimeout(url, options = {}) {
 
 /**
  * Загружает аудиофайл на Gradio Space.
- * Возвращает путь к загруженному файлу на сервере Space.
+ * Возвращает путь к загруженному файлу.
  */
 async function uploadAudio(fileBuffer, filename, contentType) {
   const formData = new FormData();
-  // Создаём Blob из Buffer для FormData
   const blob = new Blob([fileBuffer], { type: contentType || "audio/wav" });
-  formData.append("files", blob, filename);
+  formData.append("files", blob, filename || "audio.wav");
 
   const res = await fetchWithTimeout(`${BASE}/gradio_api/upload`, {
     method: "POST",
-    headers: authHeaders(), // без Content-Type — FormData сам ставит boundary
     body: formData,
   });
 
@@ -59,25 +45,21 @@ async function uploadAudio(fileBuffer, filename, contentType) {
   }
 
   const data = await res.json();
-  // Gradio возвращает массив путней, например ["/tmp/gradio/xxx/audio.wav"]
   if (!Array.isArray(data) || data.length === 0) {
     throw new Error(`Upload вернул неожиданный ответ: ${JSON.stringify(data).slice(0, 200)}`);
   }
 
-  return data[0]; // путь к файлу на сервере Space
+  return data[0];
 }
 
 /**
  * Вызывает predict endpoint Gradio.
- * Возвращает event_id.
  */
 async function callPredict(audioPath) {
   const res = await fetchWithTimeout(`${BASE}/gradio_api/call/predict`, {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({
-      data: [audioPath],
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data: [audioPath] }),
   });
 
   if (!res.ok) {
@@ -99,10 +81,7 @@ async function callPredict(audioPath) {
  */
 async function waitForResult(eventId) {
   const url = `${BASE}/gradio_api/call/predict/${eventId}`;
-  const res = await fetchWithTimeout(url, {
-    method: "GET",
-    headers: authHeaders(),
-  });
+  const res = await fetchWithTimeout(url, { method: "GET" });
 
   if (!res.ok) {
     const text = await res.text();
@@ -130,17 +109,23 @@ async function waitForResult(eventId) {
       const dataStr = dataMatch ? dataMatch[1].trim() : null;
 
       if (eventName === "error") {
-        error = dataStr || "unknown error";
+        // Gradio может вернуть data: null при ошибке
+        if (dataStr === "null" || !dataStr) {
+          error = "Модель не смогла обработать аудио (возможно, невалидный формат или слишком короткое аудио)";
+        } else {
+          error = dataStr;
+        }
         break;
       }
       if (eventName === "complete") {
-        if (!dataStr) {
+        if (!dataStr || dataStr === "null") {
           result = "";
         } else {
           try {
             const payload = JSON.parse(dataStr);
-            if (Array.isArray(payload) && payload.length > 0) {
-              result = payload[0];
+            if (Array.isArray(payload)) {
+              // Gradio возвращает [text] или [null]
+              result = payload[0] ?? "";
             } else {
               result = String(payload);
             }
@@ -170,21 +155,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Получаем файл из FormData
-    // Vercel Node.js runtime парсит multipart/form-data через req.body
-    // Но проще использовать busboy или вручную. Проверим что пришло.
     const contentType = req.headers["content-type"] || "";
-
     if (!contentType.includes("multipart/form-data")) {
       return res.status(400).json({
         error: "Expected multipart/form-data with audio file",
       });
     }
 
-    // Парсим multipart вручную (Vercel Node.js 20+ поддерживает req.body как Buffer)
-    // Но надёжнее использовать Web API Request
+    // Проверка размера
     const contentLength = parseInt(req.headers["content-length"] || "0", 10);
-    const MAX_SIZE = 25 * 1024 * 1024; // 25 MB лимит
+    const MAX_SIZE = 25 * 1024 * 1024;
     if (contentLength > MAX_SIZE) {
       return res.status(413).json({
         error: `File too large. Max ${MAX_SIZE / 1024 / 1024} MB`,
@@ -198,8 +178,12 @@ export default async function handler(req, res) {
     }
     const bodyBuffer = Buffer.concat(chunks);
 
+    if (bodyBuffer.length === 0) {
+      return res.status(400).json({ error: "Empty request body" });
+    }
+
     // Парсим multipart/form-data
-    const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/)?.[1] || contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/)?.[2];
+    const boundary = extractBoundary(contentType);
     if (!boundary) {
       return res.status(400).json({ error: "No boundary in content-type" });
     }
@@ -209,7 +193,6 @@ export default async function handler(req, res) {
     if (!audioPart) {
       return res.status(400).json({ error: "No audio file in request" });
     }
-
     if (!audioPart.data || audioPart.data.length === 0) {
       return res.status(400).json({ error: "Empty audio file" });
     }
@@ -227,15 +210,8 @@ export default async function handler(req, res) {
     // 3. Ждём результат
     const recognizedText = await waitForResult(eventId);
 
-    if (!recognizedText || !recognizedText.trim()) {
-      return res.status(200).json({
-        text: "",
-        warning: "Модель не распознала речь в аудио",
-      });
-    }
-
     return res.status(200).json({
-      text: recognizedText.trim(),
+      text: (recognizedText || "").trim(),
     });
   } catch (err) {
     console.error("ASR error:", err);
@@ -246,7 +222,15 @@ export default async function handler(req, res) {
 }
 
 /**
- * Простой парсер multipart/form-data.
+ * Извлекает boundary из Content-Type заголовка.
+ */
+function extractBoundary(contentType) {
+  const match = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
+  return match?.[1] || match?.[2];
+}
+
+/**
+ * Парсер multipart/form-data.
  * Возвращает массив { name, filename, contentType, data: Buffer }.
  */
 function parseMultipart(buffer, boundary) {
@@ -259,11 +243,20 @@ function parseMultipart(buffer, boundary) {
     const bStart = buffer.indexOf(boundaryBuffer, start);
     if (bStart === -1) break;
 
+    // Проверим не end boundary ли это
+    if (buffer.indexOf(endBoundaryBuffer, bStart) === bStart) break;
+
     const nextBStart = buffer.indexOf(boundaryBuffer, bStart + boundaryBuffer.length);
     if (nextBStart === -1) break;
 
-    // Часть между boundary и следующей boundary
-    const partData = buffer.slice(bStart + boundaryBuffer.length + 2, nextBStart - 2); // -2 for \r\n before next boundary
+    // Часть между двумя boundary (без CRLF перед/после)
+    const partStart = bStart + boundaryBuffer.length + 2; // +2 for \r\n after boundary
+    const partEnd = nextBStart - 2; // -2 for \r\n before next boundary
+    if (partEnd <= partStart) {
+      start = nextBStart;
+      continue;
+    }
+    const partData = buffer.slice(partStart, partEnd);
 
     // Парсим заголовки части
     const headerEnd = partData.indexOf("\r\n\r\n");
@@ -277,7 +270,7 @@ function parseMultipart(buffer, boundary) {
 
     // Извлекаем name и filename из Content-Disposition
     const nameMatch = headerStr.match(/name="([^"]+)"/);
-    const filenameMatch = headerStr.match(/filename="([^"]+)"/);
+    const filenameMatch = headerStr.match(/filename="([^"]*)"/);
     const ctMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
 
     parts.push({
@@ -288,9 +281,6 @@ function parseMultipart(buffer, boundary) {
     });
 
     start = nextBStart;
-
-    // Проверим не конец ли это
-    if (buffer.indexOf(endBoundaryBuffer, nextBStart) !== -1) break;
   }
 
   return parts;
