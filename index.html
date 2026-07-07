@@ -127,7 +127,7 @@
 
           <div class="nav-group">
             <div class="nav-group-title">Сервисы</div>
-            <button class="nav-link nav-btn is-disabled" type="button" disabled>
+            <button class="nav-link nav-btn" data-page="asr" type="button">
               <span class="icon icon-sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
@@ -136,7 +136,6 @@
                 </svg>
               </span>
               <span>ASR</span>
-              <span class="coming-soon">Скоро</span>
             </button>
             <button class="nav-link nav-btn is-disabled" type="button" disabled>
               <span class="icon icon-sm" aria-hidden="true">
@@ -457,6 +456,124 @@
           </section>
         </div>
 
+        <div id="asr-page" class="page">
+          <section class="service-shell">
+            <div class="service-head">
+              <div>
+                <div class="service-kicker">Сервис</div>
+                <h1 class="service-title">Распознавание речи</h1>
+                <p class="service-subtitle">
+                  Загрузи аудиофайл или запиши с микрофона — получи текстовую расшифровку.
+                </p>
+              </div>
+            </div>
+
+            <div class="service-steps" aria-label="Как работает ASR">
+              <div class="service-step"><strong>1</strong><span>Загрузи аудио</span></div>
+              <div class="service-step"><strong>2</strong><span>Дождись обработки</span></div>
+              <div class="service-step"><strong>3</strong><span>Скопируй текст</span></div>
+            </div>
+
+            <div class="panel" id="asr-panel">
+              <div class="panel-grid asr-panel-grid">
+                <div class="column">
+                  <div class="form-group">
+                    <label class="form-label" for="asr-file-input">Аудиофайл</label>
+
+                    <!-- Drag & Drop area -->
+                    <div id="asr-dropzone" class="asr-dropzone" tabindex="0" role="button" aria-label="Загрузить аудиофайл">
+                      <input type="file" id="asr-file-input" accept="audio/*,video/*" hidden />
+                      <div class="asr-dropzone-content" id="asr-dropzone-content">
+                        <div class="asr-dropzone-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                        </div>
+                        <div class="asr-dropzone-title">Перетащи аудио сюда</div>
+                        <div class="asr-dropzone-text">или нажми, чтобы выбрать файл</div>
+                        <div class="asr-dropzone-hint">Поддерживаются: WAV, MP3, OGG, WEBM, M4A · макс. 25 МБ</div>
+                      </div>
+                    </div>
+
+                    <!-- Record button -->
+                    <div class="asr-record-row">
+                      <button id="asr-record-btn" class="btn btn-secondary" type="button">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="9"/>
+                            <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                          </svg>
+                        </span>
+                        <span id="asr-record-text">Записать с микрофона</span>
+                      </button>
+                      <audio id="asr-preview" controls style="display:none" class="asr-preview"></audio>
+                    </div>
+
+                    <button id="asr-process-btn" class="btn btn-primary btn-large" type="button" disabled>
+                      <span class="icon icon-sm" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 12a9 9 0 1 0 9-9"/>
+                          <path d="m9 12 2 2 4-4"/>
+                        </svg>
+                      </span>
+                      <span class="btn-text">Распознать речь</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div id="asr-status-section" class="status-section">
+                    <div id="asr-status" class="status idle">
+                      <span class="status-icon">&#10003;</span>
+                      <div class="status-content">
+                        <div class="status-title">Готово</div>
+                        <div class="status-message">Загрузи аудио и нажми кнопку, чтобы распознать речь</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="asr-result-section" class="asr-result-section" style="display: none;">
+                    <div class="player-header">
+                      <h3 class="player-title">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                          </svg>
+                        </span>
+                        Распознанный текст
+                      </h3>
+                    </div>
+                    <div id="asr-result-text" class="asr-result-text" contenteditable="true"></div>
+                    <div class="player-actions">
+                      <button id="asr-copy-btn" class="btn btn-secondary" type="button">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="11" height="11" rx="2"/>
+                            <path d="M5 15V5a2 2 0 0 1 2-2h10"/>
+                          </svg>
+                        </span>
+                        Копировать
+                      </button>
+                      <button id="asr-clear-btn" class="btn btn-secondary" type="button">
+                        <span class="icon icon-sm" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"/>
+                            <path d="m6 6 12 12"/>
+                          </svg>
+                        </span>
+                        Очистить
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
         <div id="about-page" class="page">
           <section class="about-section">
             <div class="about-header">
@@ -743,5 +860,6 @@
 
   <script src="/src/app.js"></script>
   <script src="/src/chat.js"></script>
+  <script src="/src/asr.js"></script>
 </body>
 </html>

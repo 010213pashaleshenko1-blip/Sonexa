@@ -21,6 +21,7 @@
 const ALLOWED_HOSTS = [
   "cartik-sonexa-1-server.hf.space",
   "cartik-sonexa-aq-server.hf.space",
+  "cartik-sonexa-1-asr.hf.space",
 ];
 
 export default async function handler(req, res) {

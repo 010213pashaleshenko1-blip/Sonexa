@@ -1574,3 +1574,169 @@
     animation: none !important;
   }
 }
+
+/* ==========================================================================
+   Sonexa ASR — speech-to-text page
+   ========================================================================== */
+
+/* Panel grid для ASR — как в TTS, но с другой структурой */
+.asr-panel-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+/* Drag & Drop area */
+.asr-dropzone {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--surface);
+  margin-bottom: 16px;
+  outline: none;
+}
+.asr-dropzone:hover,
+.asr-dropzone:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+.asr-dropzone.is-dragover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.01);
+}
+.asr-dropzone.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.asr-dropzone.has-file {
+  border-color: var(--success);
+  border-style: solid;
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.asr-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  color: var(--text-tertiary);
+  display: grid;
+  place-items: center;
+}
+.asr-dropzone-icon svg { width: 100%; height: 100%; }
+.asr-dropzone:hover .asr-dropzone-icon,
+.asr-dropzone.is-dragover .asr-dropzone-icon {
+  color: var(--accent);
+  animation: asr-bounce 600ms ease;
+}
+@keyframes asr-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+.asr-dropzone-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.asr-dropzone-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.asr-dropzone-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.asr-dropzone-filename {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success);
+  word-break: break-all;
+}
+
+/* Record button row */
+.asr-record-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.asr-preview {
+  flex: 1;
+  min-width: 200px;
+  max-width: 100%;
+  height: 42px;
+}
+.asr-preview:not([style*="display: none"]) {
+  display: block !important;
+}
+
+#asr-record-btn.is-recording {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--error);
+  color: var(--error);
+  animation: asr-record-pulse 1.4s ease-in-out infinite;
+}
+@keyframes asr-record-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+#asr-record-btn.is-recording .icon {
+  animation: asr-record-blink 1s ease-in-out infinite;
+}
+@keyframes asr-record-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+/* Result section */
+.asr-result-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  animation: sonexa-player-reveal 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.asr-result-text {
+  min-height: 120px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: var(--transition);
+}
+.asr-result-text:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.asr-result-text:empty::before {
+  content: "Здесь появится распознанный текст...";
+  color: var(--text-tertiary);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .asr-panel-grid { grid-template-columns: 1fr; gap: 16px; }
+  .asr-dropzone { padding: 24px 16px; }
+  .asr-dropzone-icon { width: 40px; height: 40px; }
+  .asr-record-row { flex-direction: column; align-items: stretch; }
+  .asr-preview { width: 100%; }
+  .asr-result-text { min-height: 100px; max-height: 240px; font-size: 13px; }
+}
