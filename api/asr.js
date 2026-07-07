@@ -16,11 +16,12 @@
  */
 
 const BASE = "https://cartik-sonexa-1-asr.hf.space";
-const FETCH_TIMEOUT_MS = 120000; // ASR на CPU может быть очень медленным
+const FETCH_TIMEOUT_MS = 30000;    // таймаут для upload/predict (короткие запросы)
+const STREAM_TIMEOUT_MS = 180000;  // 3 минуты для стриминга результата (ASR на CPU медленный)
 
-function fetchWithTimeout(url, options = {}) {
+function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timeout));
 }
@@ -78,10 +79,17 @@ async function callPredict(audioPath) {
 /**
  * Читает SSE-стрим Gradio и ждёт событие complete.
  * Возвращает распознанный текст.
+ *
+ * Важные события Gradio:
+ *   event: heartbeat  data: null  ← пинг, задача ещё выполняется (ИГНОРИРУЕМ)
+ *   event: generating data: ...   ← промежуточный результат (ИГНОРИРУЕМ для ASR)
+ *   event: complete   data: [text] ← финальный результат
+ *   event: error      data: ...    ← ошибка
  */
 async function waitForResult(eventId) {
   const url = `${BASE}/gradio_api/call/predict/${eventId}`;
-  const res = await fetchWithTimeout(url, { method: "GET" });
+  // Для стрима используем длинный таймаут — модель на CPU может работать минуты
+  const res = await fetch(url, { method: "GET" });
 
   if (!res.ok) {
     const text = await res.text();
@@ -93,8 +101,15 @@ async function waitForResult(eventId) {
   let buffer = "";
   let result = null;
   let error = null;
+  const startTime = Date.now();
 
   while (true) {
+    // Проверяем общий таймаут стрима
+    if (Date.now() - startTime > STREAM_TIMEOUT_MS) {
+      try { reader.cancel(); } catch {}
+      throw new Error("ASR превысил время ожидания (3 минуты). Модель слишком медленная или зависла.");
+    }
+
     const { done, value } = await reader.read();
     if (done) break;
 
@@ -108,8 +123,16 @@ async function waitForResult(eventId) {
       const eventName = eventMatch ? eventMatch[1].trim() : null;
       const dataStr = dataMatch ? dataMatch[1].trim() : null;
 
+      // heartbeat — пинг, задача ещё выполняется, ПРОДОЛЖАЕМ ЖДАТЬ
+      if (eventName === "heartbeat") {
+        continue;
+      }
+      // generating — промежуточный результат, для ASR не нужен
+      if (eventName === "generating") {
+        continue;
+      }
+
       if (eventName === "error") {
-        // Gradio может вернуть data: null при ошибке
         if (dataStr === "null" || !dataStr) {
           error = "Модель не смогла обработать аудио (возможно, невалидный формат или слишком короткое аудио)";
         } else {
@@ -124,7 +147,6 @@ async function waitForResult(eventId) {
           try {
             const payload = JSON.parse(dataStr);
             if (Array.isArray(payload)) {
-              // Gradio возвращает [text] или [null]
               result = payload[0] ?? "";
             } else {
               result = String(payload);
@@ -143,6 +165,14 @@ async function waitForResult(eventId) {
   if (result === null) throw new Error("ASR не вернул результат (timeout?)");
   return result;
 }
+
+// Vercel: увеличиваем таймаут функции до максимума (300с для Pro, 60с для Hobby)
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+  maxDuration: 300,
+};
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");

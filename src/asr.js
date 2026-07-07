@@ -209,7 +209,7 @@
 
     processBtn.disabled = true;
     resultSection.style.display = 'none';
-    setStatus('busy', 'Распознавание речи', 'Это может занять до минуты — модель работает на CPU');
+    setStatus('busy', 'Распознавание речи', 'Модель работает на CPU — это может занять до 2-3 минут. Не закрывай страницу.');
 
     try {
       const formData = new FormData();
