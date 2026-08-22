@@ -1,16 +1,9 @@
-/**
- * Sonexa ASR — speech-to-text page logic
- *
- * Возможности:
- * - Drag & Drop загрузка аудио
- * - Выбор файла через клик
- * - Запись с микрофона (MediaRecorder API)
- * - Превью аудио перед отправкой
- * - Отправка на /api/asr → распознанный текст
- * - Копирование/редактирование результата
- */
-
 (() => {
+  const escapeHTML = (v) => String(v)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+
+  /* ========================= ASR ========================= */
   const dropzone = document.getElementById('asr-dropzone');
   const fileInput = document.getElementById('asr-file-input');
   const dropzoneContent = document.getElementById('asr-dropzone-content');
@@ -18,549 +11,122 @@
   const recordText = document.getElementById('asr-record-text');
   const preview = document.getElementById('asr-preview');
   const processBtn = document.getElementById('asr-process-btn');
-  const statusSection = document.getElementById('asr-status-section');
   const status = document.getElementById('asr-status');
   const resultSection = document.getElementById('asr-result-section');
   const resultText = document.getElementById('asr-result-text');
   const copyBtn = document.getElementById('asr-copy-btn');
   const clearBtn = document.getElementById('asr-clear-btn');
 
-  if (!dropzone || !fileInput || !processBtn) return;
-
-  let currentFile = null;
-  let currentFileName = '';
-  let mediaRecorder = null;
-  let recordedChunks = [];
-  let isRecording = false;
-
-  const DEFAULT_STATUS = {
-    title: 'Готово',
-    message: 'Загрузи аудио и нажми кнопку, чтобы распознать речь',
+  const setStatus = (type, title, message) => {
+    if (!status) return;
+    const icons = { idle: '&#10003;', busy: '&#9203;', success: '&#10003;', error: '&#10005;' };
+    status.className = `status ${type}`;
+    status.innerHTML = `<span class="status-icon">${icons[type] || icons.idle}</span><div class="status-content"><div class="status-title">${escapeHTML(title)}</div><div class="status-message">${escapeHTML(message)}</div></div>`;
   };
 
-  function setStatus(type, title, message) {
-    if (!status) return;
-    const icons = {
-      idle: '&#10003;',
-      busy: '&#9203;',
-      success: '&#10003;',
-      error: '&#10005;',
-    };
-    status.className = `status ${type}`;
-    status.innerHTML = `
-      <span class="status-icon" aria-hidden="true">${icons[type] || icons.idle}</span>
-      <div class="status-content">
-        <div class="status-title">${escapeHTML(title)}</div>
-        <div class="status-message">${escapeHTML(message)}</div>
-      </div>
-    `;
-  }
+  if (dropzone && fileInput && processBtn) {
+    let currentFile = null;
+    let currentFileName = '';
+    let recorder = null;
+    let chunks = [];
+    let recording = false;
 
-  function escapeHTML(s) {
-    return String(s)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
-
-  function setFile(file, name) {
-    currentFile = file;
-    currentFileName = name || (file?.name || 'audio.wav');
-
-    if (!file) {
-      dropzone.classList.remove('has-file');
-      dropzoneContent.innerHTML = `
-        <div class="asr-dropzone-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-        </div>
-        <div class="asr-dropzone-title">Перетащи аудио сюда</div>
-        <div class="asr-dropzone-text">или нажми, чтобы выбрать файл</div>
-        <div class="asr-dropzone-hint">Поддерживаются: WAV, MP3, OGG, WEBM, M4A · макс. 25 МБ</div>
-      `;
-      preview.style.display = 'none';
-      preview.src = '';
-      processBtn.disabled = true;
-      return;
-    }
-
-    const url = URL.createObjectURL(file);
-    preview.src = url;
-    preview.style.display = 'block';
-
-    dropzone.classList.add('has-file');
-    const sizeKB = (file.size / 1024).toFixed(1);
-    const sizeStr = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} МБ` : `${sizeKB} КБ`;
-    dropzoneContent.innerHTML = `
-      <div class="asr-dropzone-icon" aria-hidden="true" style="color:var(--success)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 18V5l12-2v13"/>
-          <circle cx="6" cy="18" r="3"/>
-          <circle cx="18" cy="16" r="3"/>
-        </svg>
-      </div>
-      <div class="asr-dropzone-filename">${escapeHTML(currentFileName)}</div>
-      <div class="asr-dropzone-text">${sizeStr} · нажми чтобы заменить</div>
-    `;
-
-    processBtn.disabled = false;
-  }
-
-  dropzone.addEventListener('click', () => {
-    if (!isRecording) fileInput.click();
-  });
-
-  dropzone.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      fileInput.click();
-    }
-  });
-
-  ['dragenter', 'dragover'].forEach(evt => {
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.add('is-dragover');
-    });
-  });
-
-  ['dragleave', 'drop'].forEach(evt => {
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.remove('is-dragover');
-    });
-  });
-
-  dropzone.addEventListener('drop', (e) => {
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      setFile(files[0]);
-    }
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files?.[0];
-    if (file) setFile(file);
-  });
-
-  recordBtn?.addEventListener('click', async () => {
-    if (isRecording) {
-      stopRecording();
-      return;
-    }
-    await startRecording();
-  });
-
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      recordedChunks = [];
-
-      const mimeTypes = ['audio/webm', 'audio/ogg', 'audio/mp4'];
-      const mimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
-
-      mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-      mediaRecorder.addEventListener('dataavailable', (e) => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-      });
-      mediaRecorder.addEventListener('stop', () => {
-        const blob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
-        const ext = mimeType.includes('webm') ? 'webm' : (mimeType.includes('ogg') ? 'ogg' : 'm4a');
-        setFile(blob, `recording-${Date.now()}.${ext}`);
-        stream.getTracks().forEach(t => t.stop());
-      });
-
-      mediaRecorder.start();
-      isRecording = true;
-      recordBtn.classList.add('is-recording');
-      recordText.textContent = 'Остановить запись';
-      setStatus('busy', 'Идёт запись', 'Нажми кнопку снова, чтобы остановить');
-    } catch (err) {
-      setStatus('error', 'Нет доступа к микрофону', err.message || 'Разреши доступ в настройках браузера');
-    }
-  }
-
-  function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
-    isRecording = false;
-    recordBtn.classList.remove('is-recording');
-    recordText.textContent = 'Записать с микрофона';
-  }
-
-  processBtn.addEventListener('click', async () => {
-    if (!currentFile) return;
-
-    processBtn.disabled = true;
-    resultSection.style.display = 'none';
-    setStatus('busy', 'Распознавание речи', 'Модель работает на CPU — это может занять до 2-3 минут. Не закрывай страницу.');
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', currentFile, currentFileName);
-
-      const res = await fetch('/api/asr', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const raw = await res.text();
-      let data;
-      try { data = JSON.parse(raw); } catch { data = {}; }
-
-      if (!res.ok) {
-        throw new Error(data?.error || `HTTP ${res.status}`);
+    const setFile = (file, name) => {
+      currentFile = file;
+      currentFileName = name || file?.name || 'audio.wav';
+      if (!file) {
+        dropzone.classList.remove('has-file');
+        if (dropzoneContent) dropzoneContent.innerHTML = '<div class="asr-dropzone-icon">↥</div><div class="asr-dropzone-title">Перетащи аудио сюда</div><div class="asr-dropzone-text">или нажми, чтобы выбрать файл</div><div class="asr-dropzone-hint">WAV, MP3, OGG, WEBM, M4A · макс. 25 МБ</div>';
+        if (preview) { preview.style.display = 'none'; preview.src = ''; }
+        processBtn.disabled = true;
+        return;
       }
-
-      const text = data.text || '';
-      resultText.textContent = text;
-      resultSection.style.display = 'block';
-
-      if (data.warning) {
-        setStatus('error', 'Пусто', data.warning);
-      } else if (text) {
-        setStatus('success', 'Готово!', 'Речь распознана — текст можно редактировать и копировать');
-      } else {
-        setStatus('error', 'Пусто', 'Не удалось распознать речь в аудио');
-      }
-
-      resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } catch (err) {
-      setStatus('error', 'Ошибка', err.message || 'Произошла неожиданная ошибка');
-    } finally {
+      if (preview) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+      dropzone.classList.add('has-file');
+      const size = file.size > 1024 * 1024 ? `${(file.size / 1024 / 1024).toFixed(1)} МБ` : `${(file.size / 1024).toFixed(1)} КБ`;
+      if (dropzoneContent) dropzoneContent.innerHTML = `<div class="asr-dropzone-icon" style="color:var(--success)">✓</div><div class="asr-dropzone-filename">${escapeHTML(currentFileName)}</div><div class="asr-dropzone-text">${size} · нажми чтобы заменить</div>`;
       processBtn.disabled = false;
-    }
-  });
+    };
 
-  copyBtn?.addEventListener('click', async () => {
-    const text = resultText.textContent || '';
-    if (!text) return;
-    const originalHTML = copyBtn.innerHTML;
+    dropzone.addEventListener('click', () => { if (!recording) fileInput.click(); });
+    fileInput.addEventListener('change', (e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('is-dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-dragover'));
+    dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('is-dragover'); if (e.dataTransfer?.files?.[0]) setFile(e.dataTransfer.files[0]); });
+
+    recordBtn?.addEventListener('click', async () => {
+      if (recording) { recorder?.stop(); recording = false; recordBtn.classList.remove('is-recording'); if (recordText) recordText.textContent = 'Записать с микрофона'; return; }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
+        const mime = ['audio/webm', 'audio/ogg', 'audio/mp4'].find((x) => MediaRecorder.isTypeSupported(x)) || '';
+        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+        recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+        recorder.onstop = () => { const blob = new Blob(chunks, { type: mime || 'audio/webm' }); const ext = mime.includes('ogg') ? 'ogg' : mime.includes('mp4') ? 'm4a' : 'webm'; setFile(blob, `recording-${Date.now()}.${ext}`); stream.getTracks().forEach((t) => t.stop()); };
+        recorder.start(); recording = true; recordBtn.classList.add('is-recording'); if (recordText) recordText.textContent = 'Остановить запись'; setStatus('busy', 'Идёт запись', 'Нажми кнопку снова, чтобы остановить.');
+      } catch (e) { setStatus('error', 'Нет доступа к микрофону', e?.message || 'Разреши доступ к микрофону в браузере.'); }
+    });
+
+    processBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+      processBtn.disabled = true; if (resultSection) resultSection.style.display = 'none';
+      setStatus('busy', 'Распознавание речи', 'Модель работает на CPU — это может занять некоторое время.');
+      try {
+        const form = new FormData(); form.append('audio', currentFile, currentFileName);
+        const res = await fetch('/api/asr', { method: 'POST', body: form });
+        const raw = await res.text(); let data = {}; try { data = JSON.parse(raw); } catch {}
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        const text = data.text || ''; if (resultText) resultText.textContent = text; if (resultSection) resultSection.style.display = 'block';
+        setStatus(text ? 'success' : 'error', text ? 'Готово!' : 'Пусто', text ? 'Речь распознана.' : 'Не удалось распознать речь.');
+      } catch (e) { setStatus('error', 'Ошибка', e?.message || 'Не удалось распознать аудио.'); }
+      finally { processBtn.disabled = false; }
+    });
+
+    copyBtn?.addEventListener('click', async () => { const text = resultText?.textContent || ''; if (!text) return; try { await navigator.clipboard.writeText(text); const old = copyBtn.innerHTML; copyBtn.innerHTML = '✓ Скопировано!'; setTimeout(() => copyBtn.innerHTML = old, 1600); } catch {} });
+    clearBtn?.addEventListener('click', () => { setFile(null); if (resultText) resultText.textContent = ''; if (resultSection) resultSection.style.display = 'none'; fileInput.value = ''; setStatus('idle', 'Готово', 'Загрузи аудио и нажми кнопку, чтобы распознать речь'); });
+    setStatus('idle', 'Готово', 'Загрузи аудио и нажми кнопку, чтобы распознать речь');
+  }
+
+  /* ========================= MUSIC ========================= */
+  const navDrawer = document.getElementById('nav-drawer');
+  const servicesGroup = navDrawer?.querySelectorAll('.nav-group')[1];
+  const oldMusicButton = Array.from(navDrawer?.querySelectorAll('.nav-link') || []).find((b) => b.textContent.includes('Music AI Generation'));
+  const musicButton = oldMusicButton || document.createElement('button');
+  musicButton.type = 'button'; musicButton.disabled = false; musicButton.className = 'nav-link nav-btn'; musicButton.dataset.page = 'music';
+  musicButton.innerHTML = `<span class="icon icon-sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span>Music AI Generation</span><span class="coming-soon" style="background:var(--accent);color:#fff">NEW!</span>`;
+  if (!oldMusicButton && servicesGroup) servicesGroup.appendChild(musicButton);
+
+  const main = document.querySelector('.main-container');
+  if (!main || document.getElementById('music-page')) return;
+
+  const musicPage = document.createElement('div'); musicPage.id = 'music-page'; musicPage.className = 'page';
+  musicPage.innerHTML = `<section style="max-width:1050px;margin:0 auto;padding:32px 20px 60px"><div class="endpoint-card"><div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><span class="beta-badge">BETA</span><span class="coming-soon" style="background:var(--accent);color:#fff">NEW!</span></div><h1 style="margin:0 0 8px">Music AI Generation</h1><p style="margin:0 0 24px;color:var(--text-secondary,#777)">Создавай музыку по описанию. Lyrics можно добавить для вокального трека.</p><label for="music-prompt" style="display:block;font-weight:600;margin-bottom:8px">Описание музыки</label><textarea id="music-prompt" rows="5" maxlength="2000" placeholder="Dark cinematic electronic, deep bass, atmospheric pads, energetic drums"></textarea><label for="music-lyrics" style="display:block;font-weight:600;margin:18px 0 8px">Текст песни <span style="font-weight:400;color:var(--text-secondary,#777)">(необязательно)</span></label><textarea id="music-lyrics" rows="7" maxlength="6000" placeholder="[Verse]\n...\n[Chorus]\n..."></textarea><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:18px"><label style="display:flex;align-items:center;gap:8px;font-weight:600">Длительность<select id="music-duration"><option value="30">30 сек</option><option value="60" selected>60 сек</option><option value="90">90 сек</option></select></label><button id="music-generate" class="btn btn-primary" type="button">Создать музыку</button></div><div id="music-status" style="margin-top:18px"></div><div id="music-result" style="display:none;margin-top:22px"><audio id="music-audio" controls style="width:100%"></audio><a id="music-download" class="btn btn-secondary" style="display:inline-block;margin-top:12px" download="sonexa-music.wav">Скачать</a></div></div></section>`;
+  main.appendChild(musicPage);
+
+  const prompt = document.getElementById('music-prompt'); const lyrics = document.getElementById('music-lyrics'); const duration = document.getElementById('music-duration'); const generateButton = document.getElementById('music-generate'); const musicStatus = document.getElementById('music-status'); const musicResult = document.getElementById('music-result'); const musicAudio = document.getElementById('music-audio'); const musicDownload = document.getElementById('music-download');
+  const statusMusic = (msg, error = false) => { musicStatus.textContent = msg; musicStatus.style.color = error ? 'var(--danger,#dc2626)' : 'var(--text-secondary,#777)'; };
+  const openMusic = () => { document.querySelectorAll('.page').forEach((p) => p.classList.remove('active')); musicPage.classList.add('active'); document.querySelectorAll('.nav-btn[data-page]').forEach((b) => b.classList.toggle('is-active', b.dataset.page === 'music')); history.replaceState({ page: 'music' }, '', `${location.pathname}?page=music`); window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('navbar')?.classList.remove('is-open'); };
+  musicButton.addEventListener('click', openMusic);
+
+  generateButton.addEventListener('click', async () => {
+    const p = prompt.value.trim(); const l = lyrics.value.trim(); if (!p) { statusMusic('Опиши, какую музыку нужно создать.', true); prompt.focus(); return; }
+    generateButton.disabled = true; musicResult.style.display = 'none'; statusMusic('Создаём трек… это может занять некоторое время.');
     try {
-      await navigator.clipboard.writeText(text);
-      copyBtn.innerHTML = '<span class="icon icon-sm" aria-hidden="true">&#10003;</span> Скопировано!';
-      setTimeout(() => { copyBtn.innerHTML = originalHTML; }, 1800);
-    } catch {
-      setStatus('error', 'Ошибка', 'Не удалось скопировать текст');
-    }
+      const res = await fetch('/api/music', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: p, lyrics: l, duration: Number(duration.value) }) });
+      const data = await res.json().catch(() => ({})); if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`); if (!data.audio_url) throw new Error('Сервер не вернул аудиофайл.');
+      musicAudio.src = data.audio_url; musicDownload.href = data.audio_url; musicResult.style.display = 'block'; statusMusic('Готово!');
+    } catch (e) { statusMusic(e?.message || 'Не удалось создать музыку.', true); }
+    finally { generateButton.disabled = false; }
   });
 
-  clearBtn?.addEventListener('click', () => {
-    setFile(null);
-    resultText.textContent = '';
-    resultSection.style.display = 'none';
-    setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
-    fileInput.value = '';
-    processBtn.disabled = false;
-  });
+  /* Allow direct ?page=music links. */
+  if (new URL(location.href).searchParams.get('page') === 'music') openMusic();
 
-  setStatus('idle', DEFAULT_STATUS.title, DEFAULT_STATUS.message);
-})();
-
-/* ---------------------------------------------------------------------------
-   User documentation
-   The site menu already contains a "Документация" button with data-page="docs".
-   We attach the user guide here so no developer-facing API documentation is
-   shown to regular users.
-   --------------------------------------------------------------------------- */
-(() => {
-  const DOCS_ID = 'docs-page';
-  const docsButtons = Array.from(document.querySelectorAll('[data-page="docs"]'));
-  if (!docsButtons.length) return;
-
-  const docsStyles = `
-    .sonexa-user-docs {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 32px 20px 56px;
-    }
-    .sonexa-docs-hero {
-      margin-bottom: 26px;
-      padding: 28px;
-      border: 1px solid var(--border, rgba(127,127,127,.2));
-      border-radius: 24px;
-      background: var(--surface, rgba(255,255,255,.04));
-      box-shadow: var(--shadow-md, 0 12px 40px rgba(0,0,0,.08));
-    }
-    .sonexa-docs-kicker {
-      display: inline-flex;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-    .sonexa-docs-hero h1 {
-      margin: 14px 0 8px;
-      font-size: clamp(30px, 5vw, 46px);
-      line-height: 1.05;
-    }
-    .sonexa-docs-hero p {
-      margin: 0;
-      max-width: 760px;
-      color: var(--text-secondary, #777);
-      font-size: 16px;
-      line-height: 1.65;
-    }
-    .sonexa-docs-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap: 16px;
-    }
-    .sonexa-guide {
-      border: 1px solid var(--border, rgba(127,127,127,.2));
-      border-radius: 20px;
-      background: var(--surface, rgba(255,255,255,.04));
-      padding: 22px;
-    }
-    .sonexa-guide--wide { grid-column: 1 / -1; }
-    .sonexa-guide h2 {
-      margin: 0 0 10px;
-      font-size: 21px;
-    }
-    .sonexa-guide h3 {
-      margin: 18px 0 8px;
-      font-size: 15px;
-    }
-    .sonexa-guide p, .sonexa-guide li {
-      color: var(--text-secondary, #777);
-      line-height: 1.65;
-      font-size: 14px;
-    }
-    .sonexa-guide ol, .sonexa-guide ul {
-      margin: 10px 0 0;
-      padding-left: 20px;
-    }
-    .sonexa-tip {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: var(--accent-soft);
-      color: var(--text-primary, #222);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-    .sonexa-warning {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: rgba(245,158,11,.10);
-      color: var(--text-primary, #222);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-    .sonexa-faq details {
-      border-top: 1px solid var(--border, rgba(127,127,127,.16));
-      padding: 13px 0;
-    }
-    .sonexa-faq details:first-child { border-top: 0; }
-    .sonexa-faq summary {
-      cursor: pointer;
-      font-weight: 650;
-      color: var(--text-primary, #222);
-    }
-    .sonexa-docs-back {
-      margin-top: 24px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid var(--border, rgba(127,127,127,.2));
-      background: var(--surface, rgba(255,255,255,.04));
-      color: var(--text-primary, #222);
-      border-radius: 12px;
-      padding: 10px 14px;
-      cursor: pointer;
-    }
-    @media (max-width: 720px) {
-      .sonexa-docs-grid { grid-template-columns: 1fr; }
-      .sonexa-guide--wide { grid-column: auto; }
-      .sonexa-user-docs { padding: 20px 14px 40px; }
-      .sonexa-docs-hero { padding: 22px; }
-    }
-  `;
-
-  if (!document.getElementById('sonexa-user-docs-style')) {
-    const style = document.createElement('style');
-    style.id = 'sonexa-user-docs-style';
-    style.textContent = docsStyles;
-    document.head.appendChild(style);
+  /* ========================= USER DOCS ========================= */
+  const docsButtons = document.querySelectorAll('[data-page="docs"]');
+  if (!document.getElementById('docs-page') && docsButtons.length) {
+    const docs = document.createElement('div'); docs.id = 'docs-page'; docs.className = 'page';
+    docs.innerHTML = `<section style="max-width:900px;margin:0 auto;padding:32px 20px 60px"><div class="endpoint-card"><span class="beta-badge">СПРАВКА</span><h1>Документация</h1><p><strong>TTS:</strong> введи текст, выбери голос и нажми «Озвучить».</p><p><strong>ASR:</strong> загрузи аудио или запиши его с микрофона, затем нажми «Распознать».</p><p><strong>Music AI:</strong> опиши музыку, при необходимости добавь lyrics, выбери длительность и нажми «Создать музыку».</p><p>Если генерация долго выполняется, не закрывай страницу: модели работают на сервере и могут требовать время на обработку.</p><p>Для Music AI доступна длительность 30, 60 или 90 секунд.</p></div></section>`;
+    main.appendChild(docs);
   }
-
-  const mainContainer = document.querySelector('.main-container');
-  if (!mainContainer) return;
-
-  const docsPage = document.createElement('div');
-  docsPage.id = DOCS_ID;
-  docsPage.className = 'page';
-  docsPage.innerHTML = `
-    <section class="sonexa-user-docs">
-      <div class="sonexa-docs-hero">
-        <span class="sonexa-docs-kicker">Справка Sonexa</span>
-        <h1>Как пользоваться Sonexa</h1>
-        <p>Здесь собраны простые инструкции без технической терминологии. Выбери нужный раздел, повтори несколько шагов и сразу получишь результат.</p>
-      </div>
-
-      <div class="sonexa-docs-grid">
-        <article class="sonexa-guide">
-          <h2>Быстрый старт</h2>
-          <ol>
-            <li>Открой боковое меню кнопкой ☰.</li>
-            <li>Выбери нужный сервис: <b>TTS</b> для озвучки текста или <b>ASR</b> для расшифровки аудио.</li>
-            <li>Сделай действие, которое просит выбранный сервис.</li>
-            <li>Дождись статуса «Готово» и используй полученный результат.</li>
-          </ol>
-          <div class="sonexa-tip">На телефоне меню открывается поверх страницы. На компьютере оно сдвигает содержимое в сторону.</div>
-        </article>
-
-        <article class="sonexa-guide">
-          <h2>TTS — озвучка текста</h2>
-          <ol>
-            <li>Открой раздел <b>TTS</b>.</li>
-            <li>Вставь или напиши текст в поле.</li>
-            <li>Выбери подходящий голос.</li>
-            <li>Нажми кнопку создания речи.</li>
-            <li>После готовности прослушай результат в плеере.</li>
-          </ol>
-          <p>В интерфейсе отображается счётчик символов. Для одного запуска доступно до <b>2000 символов</b>.</p>
-        </article>
-
-        <article class="sonexa-guide">
-          <h2>ASR — из аудио в текст</h2>
-          <ol>
-            <li>Открой <b>ASR</b>.</li>
-            <li>Перетащи файл в большую область загрузки или нажми на неё и выбери файл.</li>
-            <li>Проверь превью и нажми кнопку распознавания.</li>
-            <li>Дождись результата и при необходимости отредактируй текст.</li>
-            <li>Нажми копирование, чтобы забрать текст в буфер обмена.</li>
-          </ol>
-          <p>Поддерживаются WAV, MP3, OGG, WEBM и M4A. Максимальный размер файла — <b>25 МБ</b>.</p>
-          <div class="sonexa-warning">ASR работает на CPU, поэтому обработка длинной записи может занять несколько минут. Не закрывай страницу во время распознавания.</div>
-        </article>
-
-        <article class="sonexa-guide">
-          <h2>Запись с микрофона</h2>
-          <ol>
-            <li>В разделе ASR нажми кнопку записи.</li>
-            <li>Когда браузер спросит доступ к микрофону, разреши его.</li>
-            <li>Говори в обычном темпе и без сильного фонового шума.</li>
-            <li>Нажми кнопку остановки записи.</li>
-            <li>После этого запись появится в ASR как обычный аудиофайл — её можно отправлять на распознавание.</li>
-          </ol>
-          <div class="sonexa-tip">Если микрофон не работает, проверь разрешение для сайта в настройках браузера и наличие выбранного микрофона в системе.</div>
-        </article>
-
-        <article class="sonexa-guide">
-          <h2>Что делать с результатом TTS</h2>
-          <ul>
-            <li><b>Прослушать</b> — используй встроенный аудиоплеер.</li>
-            <li><b>Скачать</b> — нажми кнопку скачивания после генерации.</li>
-            <li><b>Поделиться</b> — скопируй ссылку на готовое аудио, если кнопка доступна в плеере.</li>
-            <li><b>Начать заново</b> — очисти поле и создай новую запись.</li>
-          </ul>
-        </article>
-
-        <article class="sonexa-guide">
-          <h2>Sonexa Assistant</h2>
-          <p>Плавающая кнопка чата внизу страницы открывает Sonexa Assistant.</p>
-          <ol>
-            <li>Нажми кнопку чата.</li>
-            <li>Напиши вопрос или задачу.</li>
-            <li>Нажми отправку и дождись ответа.</li>
-            <li>Для отдельной темы можно создать новый чат.</li>
-          </ol>
-          <p>Поле сообщения поддерживает до <b>2000 символов</b>.</p>
-        </article>
-
-        <article class="sonexa-guide sonexa-guide--wide">
-          <h2>Настройки и внешний вид</h2>
-          <h3>Тема</h3>
-          <p>В Sonexa доступны три режима: <b>тёмная</b>, <b>светлая</b> и <b>системная</b>. В системном режиме сайт подстраивается под тему устройства.</p>
-          <h3>Скорость речи</h3>
-          <p>Настройка скорости речи отображается в меню, но пока помечена как функция «Скоро» и недоступна.</p>
-        </article>
-
-        <article class="sonexa-guide sonexa-guide--wide sonexa-faq">
-          <h2>Если что-то пошло не так</h2>
-          <details open>
-            <summary>ASR показывает ошибку 404 или сервис не найден</summary>
-            <p>Попробуй обновить страницу и повторить запрос. Если ошибка сохраняется, сервис распознавания временно недоступен — повтори попытку позже.</p>
-          </details>
-          <details>
-            <summary>ASR очень долго распознаёт аудио</summary>
-            <p>Это нормально для длинных записей: модель работает на CPU. Не закрывай страницу до появления результата.</p>
-          </details>
-          <details>
-            <summary>Браузер не даёт записывать с микрофона</summary>
-            <p>Разреши доступ к микрофону для Sonexa. На мобильных устройствах также проверь системное разрешение для браузера.</p>
-          </details>
-          <details>
-            <summary>Файл не загружается в ASR</summary>
-            <p>Проверь формат и размер. Поддерживаются WAV, MP3, OGG, WEBM и M4A, максимальный размер — 25 МБ.</p>
-          </details>
-          <details>
-            <summary>TTS не запускается</summary>
-            <p>Проверь, что поле текста не пустое и не превышает 2000 символов. После этого повтори генерацию.</p>
-          </details>
-          <details>
-            <summary>Не меняется тема</summary>
-            <p>Открой «Настройки» и выбери нужный режим. Быстрая кнопка темы в верхней панели переключает режимы по кругу.</p>
-          </details>
-        </article>
-      </div>
-
-      <button class="sonexa-docs-back" id="sonexa-docs-back" type="button">← Вернуться на главную</button>
-    </section>
-  `;
-
-  mainContainer.appendChild(docsPage);
-
-  function openDocs() {
-    document.querySelectorAll('.page').forEach((page) => page.classList.remove('active'));
-    docsPage.classList.add('active');
-    document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.page === 'docs');
-    });
-    document.querySelector('.navbar')?.classList.remove('is-open');
-    document.querySelector('.overlay')?.classList.remove('open', 'visible');
-    document.body.style.overflow = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    const url = new URL(window.location.href);
-    url.searchParams.set('page', 'docs');
-    window.history.pushState({ page: 'docs' }, '', url);
-  }
-
-  function closeDocs() {
-    document.querySelectorAll('.page').forEach((page) => page.classList.remove('active'));
-    const home = document.getElementById('main-page');
-    home?.classList.add('active');
-    document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.page === 'main');
-    });
-    const url = new URL(window.location.href);
-    url.searchParams.delete('page');
-    window.history.pushState({ page: 'main' }, '', url);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  docsButtons.forEach((btn) => {
-    btn.addEventListener('click', openDocs);
-  });
-
-  document.getElementById('sonexa-docs-back')?.addEventListener('click', closeDocs);
-
-  window.addEventListener('popstate', () => {
-    const page = new URL(window.location.href).searchParams.get('page') || 'main';
-    if (page === 'docs') openDocs();
-  });
 })();
