@@ -3,170 +3,31 @@
  *
  * Endpoint:
  *   POST /api/asr
- *     FormData: { audio: <file> }
- *     → { text: "распознанный текст" }
+ *     FormData: { audio: <file>, language?: <string> }
+ *     → { text: "распознанный текст", language: "Russian" }
  *
- * Backend: HF Space Cartik/Sonexa-1-ASR (публичный, без токена)
- * URL: https://cartik-sonexa-1-asr.hf.space
+ * Backend: HF Space Cartik/Sonexa-1-ASR
+ * FastAPI endpoint: POST /predict
  *
- * Стратегия:
- *   1. POST /gradio_api/upload — загружаем аудио, получаем filepath
- *   2. POST /gradio_api/call/predict с data:[filepath] → { event_id }
- *   3. GET /gradio_api/call/predict/{event_id} → SSE stream → complete event
+ * The ASR Space exposes a native FastAPI endpoint. We call it directly
+ * instead of going through Gradio's /upload + /call/predict SSE protocol.
+ * This is more reliable with Gradio 5.x and avoids FileData/SSE compatibility
+ * problems completely.
  */
 
 const BASE = "https://cartik-sonexa-1-asr.hf.space";
-const FETCH_TIMEOUT_MS = 30000;    // таймаут для upload/predict (короткие запросы)
-const STREAM_TIMEOUT_MS = 180000;  // 3 минуты для стриминга результата (ASR на CPU медленный)
+const REQUEST_TIMEOUT_MS = 240000; // CPU ASR can be slow
+const MAX_SIZE = 25 * 1024 * 1024;
 
-function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timeout));
 }
 
-/**
- * Загружает аудиофайл на Gradio Space.
- * Возвращает путь к загруженному файлу.
- */
-async function uploadAudio(fileBuffer, filename, contentType) {
-  const formData = new FormData();
-  const blob = new Blob([fileBuffer], { type: contentType || "audio/wav" });
-  formData.append("files", blob, filename || "audio.wav");
-
-  const res = await fetchWithTimeout(`${BASE}/gradio_api/upload`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Upload failed: HTTP ${res.status}: ${text.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    throw new Error(`Upload вернул неожиданный ответ: ${JSON.stringify(data).slice(0, 200)}`);
-  }
-
-  return data[0];
-}
-
-/**
- * Вызывает predict endpoint Gradio.
- */
-async function callPredict(audioPath) {
-  const res = await fetchWithTimeout(`${BASE}/gradio_api/call/predict`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: [audioPath] }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Predict call failed: HTTP ${res.status}: ${text.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  if (!data.event_id) {
-    throw new Error(`Predict не вернул event_id: ${JSON.stringify(data).slice(0, 200)}`);
-  }
-
-  return data.event_id;
-}
-
-/**
- * Читает SSE-стрим Gradio и ждёт событие complete.
- * Возвращает распознанный текст.
- *
- * Важные события Gradio:
- *   event: heartbeat  data: null  ← пинг, задача ещё выполняется (ИГНОРИРУЕМ)
- *   event: generating data: ...   ← промежуточный результат (ИГНОРИРУЕМ для ASR)
- *   event: complete   data: [text] ← финальный результат
- *   event: error      data: ...    ← ошибка
- */
-async function waitForResult(eventId) {
-  const url = `${BASE}/gradio_api/call/predict/${eventId}`;
-  // Для стрима используем длинный таймаут — модель на CPU может работать минуты
-  const res = await fetch(url, { method: "GET" });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Stream failed: HTTP ${res.status}: ${text.slice(0, 200)}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let result = null;
-  let error = null;
-  const startTime = Date.now();
-
-  while (true) {
-    // Проверяем общий таймаут стрима
-    if (Date.now() - startTime > STREAM_TIMEOUT_MS) {
-      try { reader.cancel(); } catch {}
-      throw new Error("ASR превысил время ожидания (3 минуты). Модель слишком медленная или зависла.");
-    }
-
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const blocks = buffer.split("\n\n");
-    buffer = blocks.pop() || "";
-
-    for (const block of blocks) {
-      const eventMatch = block.match(/^event:\s*(.+)$/m);
-      const dataMatch = block.match(/^data:\s*(.+)$/m);
-      const eventName = eventMatch ? eventMatch[1].trim() : null;
-      const dataStr = dataMatch ? dataMatch[1].trim() : null;
-
-      // heartbeat — пинг, задача ещё выполняется, ПРОДОЛЖАЕМ ЖДАТЬ
-      if (eventName === "heartbeat") {
-        continue;
-      }
-      // generating — промежуточный результат, для ASR не нужен
-      if (eventName === "generating") {
-        continue;
-      }
-
-      if (eventName === "error") {
-        if (dataStr === "null" || !dataStr) {
-          error = "Модель не смогла обработать аудио (возможно, невалидный формат или слишком короткое аудио)";
-        } else {
-          error = dataStr;
-        }
-        break;
-      }
-      if (eventName === "complete") {
-        if (!dataStr || dataStr === "null") {
-          result = "";
-        } else {
-          try {
-            const payload = JSON.parse(dataStr);
-            if (Array.isArray(payload)) {
-              result = payload[0] ?? "";
-            } else {
-              result = String(payload);
-            }
-          } catch {
-            result = dataStr;
-          }
-        }
-        break;
-      }
-    }
-    if (error || result !== null) break;
-  }
-
-  if (error) throw new Error(`ASR error: ${error}`);
-  if (result === null) throw new Error("ASR не вернул результат (timeout?)");
-  return result;
-}
-
-// Vercel: увеличиваем таймаут функции до максимума (300с для Pro, 60с для Hobby)
+// Vercel function configuration.
 export const config = {
   api: {
     responseLimit: false,
@@ -186,131 +47,189 @@ export default async function handler(req, res) {
 
   try {
     const contentType = req.headers["content-type"] || "";
-    if (!contentType.includes("multipart/form-data")) {
+    if (!contentType.toLowerCase().includes("multipart/form-data")) {
       return res.status(400).json({
-        error: "Expected multipart/form-data with audio file",
+        error: "Expected multipart/form-data with an audio file",
       });
     }
 
-    // Проверка размера
-    const contentLength = parseInt(req.headers["content-length"] || "0", 10);
-    const MAX_SIZE = 25 * 1024 * 1024;
-    if (contentLength > MAX_SIZE) {
+    const contentLength = Number.parseInt(
+      req.headers["content-length"] || "0",
+      10
+    );
+
+    if (Number.isFinite(contentLength) && contentLength > MAX_SIZE) {
       return res.status(413).json({
         error: `File too large. Max ${MAX_SIZE / 1024 / 1024} MB`,
       });
     }
 
-    // Читаем всё тело запроса как Buffer
+    // Read the incoming multipart request without relying on Vercel's
+    // automatic body parser. This keeps binary audio intact.
     const chunks = [];
     for await (const chunk of req) {
-      chunks.push(chunk);
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
-    const bodyBuffer = Buffer.concat(chunks);
 
+    const bodyBuffer = Buffer.concat(chunks);
     if (bodyBuffer.length === 0) {
       return res.status(400).json({ error: "Empty request body" });
     }
 
-    // Парсим multipart/form-data
+    if (bodyBuffer.length > MAX_SIZE) {
+      return res.status(413).json({
+        error: `File too large. Max ${MAX_SIZE / 1024 / 1024} MB`,
+      });
+    }
+
     const boundary = extractBoundary(contentType);
     if (!boundary) {
       return res.status(400).json({ error: "No boundary in content-type" });
     }
 
     const parts = parseMultipart(bodyBuffer, boundary);
-    const audioPart = parts.find(p => p.name === "audio" || p.filename);
+    const audioPart = parts.find(
+      (part) => part.name === "audio" && part.filename
+    );
+
     if (!audioPart) {
-      return res.status(400).json({ error: "No audio file in request" });
+      return res.status(400).json({
+        error: "No audio file found. Use multipart field 'audio'.",
+      });
     }
+
     if (!audioPart.data || audioPart.data.length === 0) {
       return res.status(400).json({ error: "Empty audio file" });
     }
 
-    // 1. Загружаем аудио на Gradio Space
-    const audioPath = await uploadAudio(
-      audioPart.data,
-      audioPart.filename || "audio.wav",
-      audioPart.contentType || "audio/wav"
+    const languagePart = parts.find((part) => part.name === "language");
+    const language = languagePart?.data?.toString("utf8").trim() || "Russian";
+
+    // Forward the original binary audio to the FastAPI /predict endpoint.
+    // Do not set Content-Type manually: undici/fetch adds the multipart
+    // boundary for FormData automatically.
+    const formData = new FormData();
+    const audioBlob = new Blob([audioPart.data], {
+      type: audioPart.contentType || "application/octet-stream",
+    });
+
+    formData.append(
+      "audio",
+      audioBlob,
+      audioPart.filename || "audio.wav"
     );
+    formData.append("language", language);
 
-    // 2. Вызываем predict
-    const eventId = await callPredict(audioPath);
+    const upstream = await fetchWithTimeout(`${BASE}/predict`, {
+      method: "POST",
+      body: formData,
+    });
 
-    // 3. Ждём результат
-    const recognizedText = await waitForResult(eventId);
+    const responseText = await upstream.text();
+    let payload;
+
+    try {
+      payload = JSON.parse(responseText);
+    } catch {
+      payload = { detail: responseText };
+    }
+
+    if (!upstream.ok) {
+      const detail = payload?.detail || payload?.error || responseText;
+      return res.status(upstream.status).json({
+        error: `ASR backend failed (HTTP ${upstream.status})`,
+        detail: String(detail).slice(0, 2000),
+      });
+    }
 
     return res.status(200).json({
-      text: (recognizedText || "").trim(),
+      text: String(payload?.text || "").trim(),
+      language: payload?.language || language,
     });
   } catch (err) {
     console.error("ASR error:", err);
+
+    if (err?.name === "AbortError") {
+      return res.status(504).json({
+        error: "ASR backend timeout",
+        detail: "The CPU ASR model did not finish within 4 minutes.",
+      });
+    }
+
     return res.status(500).json({
-      error: err.message || "ASR failed",
+      error: "ASR failed",
+      detail: err?.message || String(err),
     });
   }
 }
 
 /**
- * Извлекает boundary из Content-Type заголовка.
+ * Extract multipart boundary from Content-Type.
  */
 function extractBoundary(contentType) {
-  const match = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
-  return match?.[1] || match?.[2];
+  const match = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  return match?.[1] || match?.[2]?.trim();
 }
 
 /**
- * Парсер multipart/form-data.
- * Возвращает массив { name, filename, contentType, data: Buffer }.
+ * Minimal binary-safe multipart/form-data parser.
+ * Returns { name, filename, contentType, data: Buffer } objects.
  */
 function parseMultipart(buffer, boundary) {
   const parts = [];
-  const boundaryBuffer = Buffer.from("--" + boundary);
-  const endBoundaryBuffer = Buffer.from("--" + boundary + "--");
+  const marker = Buffer.from(`--${boundary}`);
+  const endMarker = Buffer.from(`--${boundary}--`);
 
-  let start = 0;
-  while (start < buffer.length) {
-    const bStart = buffer.indexOf(boundaryBuffer, start);
-    if (bStart === -1) break;
+  let cursor = 0;
 
-    // Проверим не end boundary ли это
-    if (buffer.indexOf(endBoundaryBuffer, bStart) === bStart) break;
+  while (cursor < buffer.length) {
+    const boundaryStart = buffer.indexOf(marker, cursor);
+    if (boundaryStart === -1) break;
 
-    const nextBStart = buffer.indexOf(boundaryBuffer, bStart + boundaryBuffer.length);
-    if (nextBStart === -1) break;
+    if (buffer.indexOf(endMarker, boundaryStart) === boundaryStart) break;
 
-    // Часть между двумя boundary (без CRLF перед/после)
-    const partStart = bStart + boundaryBuffer.length + 2; // +2 for \r\n after boundary
-    const partEnd = nextBStart - 2; // -2 for \r\n before next boundary
-    if (partEnd <= partStart) {
-      start = nextBStart;
-      continue;
+    const afterBoundary = boundaryStart + marker.length;
+
+    // Normal multipart boundaries are followed by CRLF.
+    let partStart = afterBoundary;
+    if (buffer.slice(partStart, partStart + 2).equals(Buffer.from("\r\n"))) {
+      partStart += 2;
     }
-    const partData = buffer.slice(partStart, partEnd);
 
-    // Парсим заголовки части
-    const headerEnd = partData.indexOf("\r\n\r\n");
+    const nextBoundary = buffer.indexOf(marker, partStart);
+    if (nextBoundary === -1) break;
+
+    let partEnd = nextBoundary;
+    if (partEnd >= 2 && buffer.slice(partEnd - 2, partEnd).equals(Buffer.from("\r\n"))) {
+      partEnd -= 2;
+    }
+
+    const part = buffer.slice(partStart, partEnd);
+    const headerEnd = part.indexOf(Buffer.from("\r\n\r\n"));
+
     if (headerEnd === -1) {
-      start = nextBStart;
+      cursor = nextBoundary;
       continue;
     }
 
-    const headerStr = partData.slice(0, headerEnd).toString("utf-8");
-    const contentBuffer = partData.slice(headerEnd + 4);
+    const headerStr = part.slice(0, headerEnd).toString("utf8");
+    const data = part.slice(headerEnd + 4);
 
-    // Извлекаем name и filename из Content-Disposition
-    const nameMatch = headerStr.match(/name="([^"]+)"/);
-    const filenameMatch = headerStr.match(/filename="([^"]*)"/);
-    const ctMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
+    const nameMatch = headerStr.match(/name="([^"]+)"/i);
+    const filenameMatch = headerStr.match(/filename="([^"]*)"/i);
+    const contentTypeMatch = headerStr.match(
+      /Content-Type:\s*([^\r\n]+)/i
+    );
 
     parts.push({
       name: nameMatch?.[1] || "",
       filename: filenameMatch?.[1] || undefined,
-      contentType: ctMatch?.[1]?.trim() || "application/octet-stream",
-      data: contentBuffer,
+      contentType:
+        contentTypeMatch?.[1]?.trim() || "application/octet-stream",
+      data,
     });
 
-    start = nextBStart;
+    cursor = nextBoundary;
   }
 
   return parts;
