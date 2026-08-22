@@ -176,6 +176,15 @@
   });
 
   musicButton.addEventListener('click', () => {
+    // Закрываем мобильный overlay ДО показа страницы, иначе
+    // backdrop-filter: blur() остаётся над Music на первый кадр.
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.classList.remove('visible');
+    }
+    document.body.style.overflow = '';
+
     if (typeof window.showPage === 'function') {
       window.showPage('music');
       return;
@@ -185,10 +194,18 @@
       pageElement.classList.remove('active');
     });
     page.classList.add('active');
+    window.scrollTo(0, 0);
   });
 
   if (new URL(window.location.href).searchParams.get('page') === 'music') {
     requestAnimationFrame(() => {
+      const overlay = document.getElementById('overlay');
+      if (overlay) {
+        overlay.classList.remove('open');
+        overlay.classList.remove('visible');
+      }
+      document.body.style.overflow = '';
+
       if (typeof window.showPage === 'function') {
         window.showPage('music', { pushState: false });
       } else {
