@@ -1,0 +1,255 @@
+/* Sonexa Music — matches the existing TTS/ASR service UI */
+
+#music-page {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  will-change: auto;
+}
+
+#music-page .music-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 40px 0 48px;
+}
+
+#music-page .music-card {
+  width: 100%;
+}
+
+#music-page .music-head {
+  margin-bottom: 28px;
+}
+
+#music-page .music-kicker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+#music-page .music-new-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1;
+}
+
+#music-page .music-title {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+#music-page .music-subtitle {
+  max-width: 560px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+#music-page .music-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+#music-page .music-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  min-width: 0;
+}
+
+#music-page .music-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#music-page .music-field {
+  width: 100%;
+  min-width: 0;
+  min-height: 180px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  padding: 12px 14px;
+  line-height: 1.6;
+  outline: none;
+  transition: var(--transition);
+}
+
+#music-page .music-field--lyrics {
+  min-height: 220px;
+  margin-top: 16px;
+}
+
+#music-page .music-field::placeholder {
+  color: var(--text-tertiary);
+}
+
+#music-page .music-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+#music-page .music-controls {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px;
+  align-items: end;
+  margin-top: 20px;
+}
+
+#music-page .music-duration-wrap {
+  min-width: 0;
+}
+
+#music-page .music-select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  padding: 0 12px;
+  outline: none;
+}
+
+#music-page .music-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+#music-page .music-generate {
+  width: 100%;
+  min-height: 44px;
+}
+
+#music-page .music-status {
+  min-height: 22px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+#music-page .music-status.is-error {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  color: var(--error);
+}
+
+#music-page .music-status.is-success {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+}
+
+#music-page .music-result {
+  display: none;
+  margin-top: 12px;
+}
+
+#music-page .music-result.is-visible {
+  display: block;
+}
+
+#music-page .music-result audio {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+#music-page .music-result .btn {
+  margin-top: 12px;
+}
+
+#music-page .music-hint {
+  margin-top: 12px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* The generic mobile menu overlay used to keep blur even after it became
+   visually transparent. Only blur while the overlay is actually open. */
+.overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.overlay.open {
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+@media (max-width: 1024px) {
+  #music-page .music-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  #music-page .music-shell {
+    padding: 24px 0 36px;
+  }
+
+  #music-page .music-head {
+    margin-bottom: 20px;
+  }
+
+  #music-page .music-title {
+    font-size: clamp(1.5rem, 6vw, 2rem);
+  }
+
+  #music-page .music-subtitle {
+    font-size: 14px;
+  }
+
+  #music-page .music-grid {
+    gap: 16px;
+  }
+
+  #music-page .music-panel {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+  }
+
+  #music-page .music-field {
+    min-height: 140px;
+    font-size: 16px;
+  }
+
+  #music-page .music-field--lyrics {
+    min-height: 170px;
+  }
+
+  #music-page .music-controls {
+    grid-template-columns: 1fr;
+  }
+}
