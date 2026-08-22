@@ -1,10 +1,10 @@
-const BASE = "https://cartik-sonexa-music-v0-1-beta.hf.space";
+const BASE = "https://cartik-sonexa-music-server.hf.space";
 const TIMEOUT_MS = 300000;
 
-function withTimeout(promise, ms = TIMEOUT_MS) {
+function withTimeout(promiseFactory, ms = TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
-  return promise(controller.signal).finally(() => clearTimeout(timer));
+  return promiseFactory(controller.signal).finally(() => clearTimeout(timer));
 }
 
 async function callPredict(data) {
@@ -32,9 +32,7 @@ async function callPredict(data) {
 
 async function waitForResult(eventId) {
   return withTimeout(async (signal) => {
-    const res = await fetch(`${BASE}/gradio_api/call/predict/${eventId}`, {
-      signal,
-    });
+    const res = await fetch(`${BASE}/gradio_api/call/predict/${eventId}`, { signal });
 
     if (!res.ok) {
       const text = await res.text();
@@ -84,12 +82,8 @@ async function waitForResult(eventId) {
 
         if (first && typeof first === "object") {
           if (typeof first.url === "string") return first.url;
-          if (typeof first.path === "string") {
-            return `${BASE}/file=${encodeURIComponent(first.path)}`;
-          }
-          if (typeof first.name === "string") {
-            return `${BASE}/file=${encodeURIComponent(first.name)}`;
-          }
+          if (typeof first.path === "string") return `${BASE}/file=${encodeURIComponent(first.path)}`;
+          if (typeof first.name === "string") return `${BASE}/file=${encodeURIComponent(first.name)}`;
         }
 
         throw new Error("Music backend returned an unsupported audio result.");
@@ -114,39 +108,24 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
     const lyrics = typeof req.body?.lyrics === "string" ? req.body.lyrics.trim() : "";
     const duration = Number(req.body?.duration || 60);
 
-    if (!prompt) {
-      return res.status(400).json({ error: "Music description is required." });
-    }
-
+    if (!prompt) return res.status(400).json({ error: "Music description is required." });
     if (![30, 60, 90].includes(duration)) {
       return res.status(400).json({ error: "Duration must be 30, 60, or 90 seconds." });
     }
 
-    const eventId = await callPredict([
-      prompt,
-      lyrics,
-      duration,
-    ]);
-
+    const eventId = await callPredict([prompt, lyrics, duration]);
     const audioUrl = await waitForResult(eventId);
 
-    return res.status(200).json({
-      audio_url: audioUrl,
-      duration,
-    });
+    return res.status(200).json({ audio_url: audioUrl, duration });
   } catch (error) {
     console.error("Music API error:", error);
-    return res.status(500).json({
-      error: error?.message || "Music generation failed.",
-    });
+    return res.status(500).json({ error: error?.message || "Music generation failed." });
   }
 }
