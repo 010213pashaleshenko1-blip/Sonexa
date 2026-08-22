@@ -1,10 +1,11 @@
 (() => {
   const escapeHTML = (v) => String(v)
     .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
-  /* ========================= ASR ========================= */
   const dropzone = document.getElementById('asr-dropzone');
   const fileInput = document.getElementById('asr-file-input');
   const dropzoneContent = document.getElementById('asr-dropzone-content');
@@ -99,7 +100,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];
         const mime = ['audio/webm', 'audio/ogg', 'audio/mp4'].find((x) => MediaRecorder.isTypeSupported(x)) || '';
-        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
         recorder.ondataavailable = (e) => {
           if (e.data.size) chunks.push(e.data);
         };
@@ -178,220 +179,12 @@
     setStatus('idle', 'Готово', 'Загрузи аудио и нажми кнопку, чтобы распознать речь');
   }
 
-  /* ========================= MUSIC ========================= */
-  const navDrawer = document.getElementById('nav-drawer');
-  const servicesGroup = navDrawer?.querySelectorAll('.nav-group')[1];
-  const main = document.querySelector('.main-container');
-
-  if (servicesGroup && main && !document.getElementById('music-page')) {
-    const oldMusicButton = Array.from(servicesGroup.querySelectorAll('.nav-link'))
-      .find((b) => b.textContent.includes('Music AI Generation'));
-
-    const musicButton = oldMusicButton || document.createElement('button');
-    musicButton.type = 'button';
-    musicButton.disabled = false;
-    musicButton.className = 'nav-link nav-btn';
-    musicButton.dataset.page = 'music';
-    musicButton.innerHTML = `
-      <span class="icon icon-sm" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 18V5l12-2v13"/>
-          <circle cx="6" cy="18" r="3"/>
-          <circle cx="18" cy="16" r="3"/>
-        </svg>
-      </span>
-      <span>Music AI Generation</span>
-      <span class="coming-soon">NEW!</span>
-    `;
-
-    if (!oldMusicButton) servicesGroup.appendChild(musicButton);
-
-    const musicPage = document.createElement('div');
-    musicPage.id = 'music-page';
-    musicPage.className = 'page';
-    musicPage.innerHTML = `
-      <section class="service-shell">
-        <div class="service-head">
-          <div>
-            <div class="service-kicker">Сервис <span class="coming-soon">NEW!</span></div>
-            <h1 class="service-title">Music AI Generation</h1>
-            <p class="service-subtitle">Создавай музыку по описанию и, при необходимости, добавляй текст песни.</p>
-          </div>
-        </div>
-
-        <div class="service-steps" aria-label="Как работает Music AI">
-          <div class="service-step"><strong>1</strong><span>Опиши музыку</span></div>
-          <div class="service-step"><strong>2</strong><span>Выбери длину</span></div>
-          <div class="service-step"><strong>3</strong><span>Создай трек</span></div>
-        </div>
-
-        <div class="panel" id="music-panel">
-          <div class="panel-grid">
-            <div class="column">
-              <div class="form-group">
-                <label class="form-label" for="music-prompt">Описание музыки</label>
-                <textarea id="music-prompt" class="text-input music-text-input" rows="6" maxlength="2000" placeholder="Например: dark cinematic electronic, deep bass, atmospheric pads, energetic drums..."></textarea>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="music-lyrics">Текст песни <span class="form-label-muted">(необязательно)</span></label>
-                <textarea id="music-lyrics" class="text-input music-text-input music-lyrics-input" rows="8" maxlength="6000" placeholder="[Verse]\n...\n\n[Chorus]\n..."></textarea>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="music-duration">Длительность</label>
-                <select id="music-duration" class="voice-select">
-                  <option value="30">30 секунд</option>
-                  <option value="60" selected>60 секунд</option>
-                  <option value="90">90 секунд</option>
-                </select>
-              </div>
-
-              <button id="music-generate" class="btn btn-primary btn-large" type="button">
-                <span class="icon icon-sm" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 3v18"/>
-                    <path d="M5 10l7-7 7 7"/>
-                  </svg>
-                </span>
-                <span class="btn-text">Создать музыку</span>
-                <span class="btn-arrow" aria-hidden="true">&rarr;</span>
-              </button>
-            </div>
-
-            <div class="column">
-              <div id="music-status-section" class="status-section">
-                <div id="music-status" class="status idle">
-                  <span class="status-icon">&#10003;</span>
-                  <div class="status-content">
-                    <div class="status-title">Готово</div>
-                    <div class="status-message">Опиши музыку и нажми кнопку, чтобы создать трек</div>
-                  </div>
-                </div>
-              </div>
-
-              <div id="music-result" class="player-section" style="display:none;">
-                <div class="player-header">
-                  <h3 class="player-title"><span class="icon icon-sm" aria-hidden="true">♫</span>Результат</h3>
-                </div>
-                <audio id="music-audio" controls class="audio-player"></audio>
-                <div class="player-actions">
-                  <a id="music-download" class="btn btn-secondary" href="#" download="sonexa-music.wav"><span class="icon icon-sm" aria-hidden="true">↓</span>Скачать</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    `;
-
-    main.appendChild(musicPage);
-
-    const prompt = document.getElementById('music-prompt');
-    const lyrics = document.getElementById('music-lyrics');
-    const duration = document.getElementById('music-duration');
-    const generateButton = document.getElementById('music-generate');
-    const musicStatus = document.getElementById('music-status');
-    const musicResult = document.getElementById('music-result');
-    const musicAudio = document.getElementById('music-audio');
-    const musicDownload = document.getElementById('music-download');
-
-    const setMusicStatus = (type, title, message) => {
-      musicStatus.className = `status ${type}`;
-      const icons = { idle: '&#10003;', busy: '&#9203;', success: '&#10003;', error: '&#10005;' };
-      musicStatus.innerHTML = `<span class="status-icon">${icons[type] || icons.idle}</span><div class="status-content"><div class="status-title">${escapeHTML(title)}</div><div class="status-message">${escapeHTML(message)}</div></div>`;
-    };
-
-    const openMusic = () => {
-      try { if (typeof closeMenu === 'function') closeMenu(); } catch {}
-      document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
-      musicPage.classList.add('active');
-      musicPage.style.opacity = '1';
-      musicPage.style.filter = 'none';
-      musicPage.style.transform = 'none';
-      document.querySelectorAll('.nav-btn[data-page]').forEach((b) => b.classList.toggle('is-active', b.dataset.page === 'music'));
-      history.replaceState({ page: 'music' }, '', `${location.pathname}?page=music`);
-      window.scrollTo(0, 0);
-    };
-
-    musicButton.addEventListener('click', openMusic);
-
-    let musicClientPromise = null;
-
-    const getMusicClient = async () => {
-      if (!musicClientPromise) {
-        musicClientPromise = import('https://cdn.jsdelivr.net/npm/@gradio/client@1.19.0/dist/index.min.js')
-          .then(({ Client }) => Client.connect('https://cartik-sonexa-music-server.hf.space'));
-      }
-      return musicClientPromise;
-    };
-
-    const extractMusicUrl = (result) => {
-      const first = Array.isArray(result?.data) ? result.data[0] : result?.data;
-      if (typeof first === 'string') {
-        if (first.startsWith('http://') || first.startsWith('https://')) return first;
-        return `https://cartik-sonexa-music-server.hf.space/file=${encodeURIComponent(first)}`;
-      }
-      if (first && typeof first === 'object') {
-        if (typeof first.url === 'string') return first.url;
-        if (typeof first.path === 'string') {
-          if (first.path.startsWith('http://') || first.path.startsWith('https://')) return first.path;
-          return `https://cartik-sonexa-music-server.hf.space/file=${encodeURIComponent(first.path)}`;
-        }
-        if (typeof first.name === 'string') {
-          if (first.name.startsWith('http://') || first.name.startsWith('https://')) return first.name;
-          return `https://cartik-sonexa-music-server.hf.space/file=${encodeURIComponent(first.name)}`;
-        }
-      }
-      return null;
-    };
-
-    generateButton.addEventListener('click', async () => {
-      const p = prompt.value.trim();
-      const l = lyrics.value.trim();
-
-      if (!p) {
-        setMusicStatus('error', 'Нет описания', 'Опиши, какую музыку нужно создать.');
-        prompt.focus();
-        return;
-      }
-
-      generateButton.disabled = true;
-      musicResult.style.display = 'none';
-      setMusicStatus('busy', 'Генерация', 'Подключаемся к Music Server и запускаем генерацию…');
-
-      try {
-        const client = await getMusicClient();
-        setMusicStatus('busy', 'Генерация', 'GPU выделен. Создаём трек…');
-
-        const result = await client.predict('/predict', [
-          p,
-          l,
-          Number(duration.value),
-        ]);
-
-        const audioUrl = extractMusicUrl(result);
-
-        if (!audioUrl) {
-          console.error('Unexpected Music result:', result);
-          throw new Error('Music Server не вернул аудиофайл.');
-        }
-
-        musicAudio.src = audioUrl;
-        musicAudio.load();
-        musicDownload.href = audioUrl;
-        musicResult.style.display = 'block';
-        setMusicStatus('success', 'Готово!', 'Музыка создана.');
-      } catch (e) {
-        console.error('Music generation error:', e);
-        setMusicStatus('error', 'Ошибка', e?.message || 'Не удалось подключиться к Music Server.');
-      } finally {
-        generateButton.disabled = false;
-      }
-    });
-
-    if (new URL(location.href).searchParams.get('page') === 'music') {
-      openMusic();
-    }
+  /* Music is a separate module. This loader exists only because the current
+     index.html already loads asr.js and does not yet include music.js. */
+  if (!document.querySelector('script[data-sonexa-music-loader]')) {
+    const script = document.createElement('script');
+    script.src = '/src/music.js';
+    script.dataset.sonexaMusicLoader = 'true';
+    document.body.appendChild(script);
   }
 })();
