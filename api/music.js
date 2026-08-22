@@ -7,91 +7,70 @@ function withTimeout(promiseFactory, ms = TIMEOUT_MS) {
   return promiseFactory(controller.signal).finally(() => clearTimeout(timer));
 }
 
-async function callPredict(data) {
+async function predict(prompt, lyrics, duration) {
   return withTimeout(async (signal) => {
-    const res = await fetch(`${BASE}/gradio_api/call/predict`, {
+    const res = await fetch(`${BASE}/api/predict/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data }),
+      body: JSON.stringify({
+        data: [prompt, lyrics, duration],
+        fn_index: 0,
+      }),
       signal,
     });
 
+    const text = await res.text();
+
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Music backend: HTTP ${res.status}: ${text.slice(0, 300)}`);
+      throw new Error(
+        `Music backend: HTTP ${res.status}: ${text.slice(0, 500)}`
+      );
     }
 
-    const body = await res.json();
-    if (!body.event_id) {
-      throw new Error("Music backend did not return event_id.");
+    let body;
+
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error(
+        `Music backend returned invalid JSON: ${text.slice(0, 500)}`
+      );
     }
 
-    return body.event_id;
+    if (body.error) {
+      throw new Error(String(body.error));
+    }
+
+    return body.data;
   });
 }
 
-async function waitForResult(eventId) {
-  return withTimeout(async (signal) => {
-    const res = await fetch(`${BASE}/gradio_api/call/predict/${eventId}`, { signal });
+function extractAudioUrl(data) {
+  const first = Array.isArray(data) ? data[0] : data;
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Music stream: HTTP ${res.status}: ${text.slice(0, 300)}`);
+  if (typeof first === "string") {
+    if (first.startsWith("http://") || first.startsWith("https://")) {
+      return first;
     }
 
-    if (!res.body) {
-      throw new Error("Music backend returned an empty stream.");
+    return `${BASE}/file=${encodeURIComponent(first)}`;
+  }
+
+  if (first && typeof first === "object") {
+    if (typeof first.url === "string") {
+      return first.url;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const blocks = buffer.split("\n\n");
-      buffer = blocks.pop() || "";
-
-      for (const block of blocks) {
-        const event = block.match(/^event:\s*(.+)$/m)?.[1]?.trim();
-        const dataLine = block.match(/^data:\s*(.+)$/m)?.[1]?.trim();
-
-        if (event === "error") {
-          throw new Error(dataLine || "Music generation failed.");
-        }
-
-        if (event !== "complete" || !dataLine) continue;
-
-        let payload;
-        try {
-          payload = JSON.parse(dataLine);
-        } catch {
-          throw new Error("Invalid result from music backend.");
-        }
-
-        const first = Array.isArray(payload) ? payload[0] : payload;
-
-        if (typeof first === "string") {
-          return first.startsWith("http")
-            ? first
-            : `${BASE}/file=${encodeURIComponent(first)}`;
-        }
-
-        if (first && typeof first === "object") {
-          if (typeof first.url === "string") return first.url;
-          if (typeof first.path === "string") return `${BASE}/file=${encodeURIComponent(first.path)}`;
-          if (typeof first.name === "string") return `${BASE}/file=${encodeURIComponent(first.name)}`;
-        }
-
-        throw new Error("Music backend returned an unsupported audio result.");
-      }
+    if (typeof first.path === "string") {
+      return `${BASE}/file=${encodeURIComponent(first.path)}`;
     }
 
-    throw new Error("Music backend finished without a result.");
-  });
+    if (typeof first.name === "string") {
+      return `${BASE}/file=${encodeURIComponent(first.name)}`;
+    }
+  }
+
+  throw new Error("Music backend returned an unsupported audio result.");
 }
 
 export const config = {
@@ -107,25 +86,64 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Method not allowed",
+    });
+  }
 
   try {
-    const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
-    const lyrics = typeof req.body?.lyrics === "string" ? req.body.lyrics.trim() : "";
-    const duration = Number(req.body?.duration || 60);
+    const prompt =
+      typeof req.body?.prompt === "string"
+        ? req.body.prompt.trim()
+        : "";
 
-    if (!prompt) return res.status(400).json({ error: "Music description is required." });
-    if (![30, 60, 90].includes(duration)) {
-      return res.status(400).json({ error: "Duration must be 30, 60, or 90 seconds." });
+    const lyrics =
+      typeof req.body?.lyrics === "string"
+        ? req.body.lyrics.trim()
+        : "";
+
+    const duration = Number(
+      req.body?.duration ?? 60
+    );
+
+    if (!prompt) {
+      return res.status(400).json({
+        error: "Music description is required.",
+      });
     }
 
-    const eventId = await callPredict([prompt, lyrics, duration]);
-    const audioUrl = await waitForResult(eventId);
+    if (![30, 60, 90].includes(duration)) {
+      return res.status(400).json({
+        error: "Duration must be 30, 60, or 90 seconds.",
+      });
+    }
 
-    return res.status(200).json({ audio_url: audioUrl, duration });
+    const data = await predict(
+      prompt,
+      lyrics,
+      duration
+    );
+
+    const audioUrl = extractAudioUrl(data);
+
+    return res.status(200).json({
+      success: true,
+      audio_url: audioUrl,
+      duration,
+    });
+
   } catch (error) {
     console.error("Music API error:", error);
-    return res.status(500).json({ error: error?.message || "Music generation failed." });
+
+    return res.status(500).json({
+      error:
+        error?.message ||
+        "Music generation failed.",
+    });
   }
 }
