@@ -4,5 +4,8 @@
   "private": true,
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@gradio/client": "^1.19.0"
   }
 }
