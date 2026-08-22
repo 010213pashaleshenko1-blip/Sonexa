@@ -1,17 +1,15 @@
 (() => {
   const escapeHTML = (v) => String(v)
     .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+    .replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 
   /* ========================= ASR ========================= */
   const dropzone = document.getElementById('asr-dropzone');
   const fileInput = document.getElementById('asr-file-input');
   const dropzoneContent = document.getElementById('asr-dropzone-content');
   const recordBtn = document.getElementById('asr-record-btn');
-  const recordText = document.getElementById('asr-record-text');
+  const recordText = document.getElementById('record-text');
   const preview = document.getElementById('asr-preview');
   const processBtn = document.getElementById('asr-process-btn');
   const status = document.getElementById('asr-status');
@@ -232,24 +230,12 @@
             <div class="column">
               <div class="form-group">
                 <label class="form-label" for="music-prompt">Описание музыки</label>
-                <textarea
-                  id="music-prompt"
-                  class="text-input music-text-input"
-                  rows="6"
-                  maxlength="2000"
-                  placeholder="Например: dark cinematic electronic, deep bass, atmospheric pads, energetic drums..."
-                ></textarea>
+                <textarea id="music-prompt" class="text-input music-text-input" rows="6" maxlength="2000" placeholder="Например: dark cinematic electronic, deep bass, atmospheric pads, energetic drums..."></textarea>
               </div>
 
               <div class="form-group">
                 <label class="form-label" for="music-lyrics">Текст песни <span class="form-label-muted">(необязательно)</span></label>
-                <textarea
-                  id="music-lyrics"
-                  class="text-input music-text-input music-lyrics-input"
-                  rows="8"
-                  maxlength="6000"
-                  placeholder="[Verse]\n...\n\n[Chorus]\n..."
-                ></textarea>
+                <textarea id="music-lyrics" class="text-input music-text-input music-lyrics-input" rows="8" maxlength="6000" placeholder="[Verse]\n...\n\n[Chorus]\n..."></textarea>
               </div>
 
               <div class="form-group">
@@ -286,17 +272,11 @@
 
               <div id="music-result" class="player-section" style="display:none;">
                 <div class="player-header">
-                  <h3 class="player-title">
-                    <span class="icon icon-sm" aria-hidden="true">♫</span>
-                    Результат
-                  </h3>
+                  <h3 class="player-title"><span class="icon icon-sm" aria-hidden="true">♫</span>Результат</h3>
                 </div>
                 <audio id="music-audio" controls class="audio-player"></audio>
                 <div class="player-actions">
-                  <a id="music-download" class="btn btn-secondary" href="#" download="sonexa-music.wav">
-                    <span class="icon icon-sm" aria-hidden="true">↓</span>
-                    Скачать
-                  </a>
+                  <a id="music-download" class="btn btn-secondary" href="#" download="sonexa-music.wav"><span class="icon icon-sm" aria-hidden="true">↓</span>Скачать</a>
                 </div>
               </div>
             </div>
@@ -319,37 +299,52 @@
     const setMusicStatus = (type, title, message) => {
       musicStatus.className = `status ${type}`;
       const icons = { idle: '&#10003;', busy: '&#9203;', success: '&#10003;', error: '&#10005;' };
-      musicStatus.innerHTML = `
-        <span class="status-icon">${icons[type] || icons.idle}</span>
-        <div class="status-content">
-          <div class="status-title">${escapeHTML(title)}</div>
-          <div class="status-message">${escapeHTML(message)}</div>
-        </div>
-      `;
+      musicStatus.innerHTML = `<span class="status-icon">${icons[type] || icons.idle}</span><div class="status-content"><div class="status-title">${escapeHTML(title)}</div><div class="status-message">${escapeHTML(message)}</div></div>`;
     };
 
     const openMusic = () => {
-      // Use the site's real menu closing logic so the mobile overlay and blur
-      // are removed correctly before the page is shown.
-      try {
-        if (typeof closeMenu === 'function') closeMenu();
-      } catch {}
-
+      try { if (typeof closeMenu === 'function') closeMenu(); } catch {}
       document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
       musicPage.classList.add('active');
       musicPage.style.opacity = '1';
       musicPage.style.filter = 'none';
       musicPage.style.transform = 'none';
-
-      document.querySelectorAll('.nav-btn[data-page]').forEach((b) => {
-        b.classList.toggle('is-active', b.dataset.page === 'music');
-      });
-
+      document.querySelectorAll('.nav-btn[data-page]').forEach((b) => b.classList.toggle('is-active', b.dataset.page === 'music'));
       history.replaceState({ page: 'music' }, '', `${location.pathname}?page=music`);
       window.scrollTo(0, 0);
     };
 
     musicButton.addEventListener('click', openMusic);
+
+    let musicClientPromise = null;
+
+    const getMusicClient = async () => {
+      if (!musicClientPromise) {
+        musicClientPromise = import('https://cdn.jsdelivr.net/npm/@gradio/client@1.19.0/dist/index.min.js')
+          .then(({ Client }) => Client.connect('https://cartik-sonexa-music-server.hf.space'));
+      }
+      return musicClientPromise;
+    };
+
+    const extractMusicUrl = (result) => {
+      const first = Array.isArray(result?.data) ? result.data[0] : result?.data;
+      if (typeof first === 'string') {
+        if (first.startsWith('http://') || first.startsWith('https://')) return first;
+        return `https://cartik-sonexa-music-server.hf.space/file=${encodeURIComponent(first)}`;
+      }
+      if (first && typeof first === 'object') {
+        if (typeof first.url === 'string') return first.url;
+        if (typeof first.path === 'string') {
+          if (first.path.startsWith('http://') || first.path.startsWith('https://')) return first.path;
+          return `https://cartik-sonexa-music-server.hf.space/file=${encodeURIComponent(first.path)}`;
+        }
+        if (typeof first.name === 'string') {
+          if (first.name.startsWith('http://') || first.name.startsWith('https://')) return first.name;
+          return `https://cartik-sonexa-music-server.hf.space/file=${encodeURIComponent(first.name)}`;
+        }
+      }
+      return null;
+    };
 
     generateButton.addEventListener('click', async () => {
       const p = prompt.value.trim();
@@ -363,29 +358,33 @@
 
       generateButton.disabled = true;
       musicResult.style.display = 'none';
-      setMusicStatus('busy', 'Генерация', 'Создаём трек — это может занять некоторое время.');
+      setMusicStatus('busy', 'Генерация', 'Подключаемся к Music Server и запускаем генерацию…');
 
       try {
-        const res = await fetch('/api/music', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: p,
-            lyrics: l,
-            duration: Number(duration.value),
-          }),
-        });
+        const client = await getMusicClient();
+        setMusicStatus('busy', 'Генерация', 'GPU выделен. Создаём трек…');
 
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        if (!data.audio_url) throw new Error('Сервер не вернул аудиофайл.');
+        const result = await client.predict('/predict', [
+          p,
+          l,
+          Number(duration.value),
+        ]);
 
-        musicAudio.src = data.audio_url;
-        musicDownload.href = data.audio_url;
+        const audioUrl = extractMusicUrl(result);
+
+        if (!audioUrl) {
+          console.error('Unexpected Music result:', result);
+          throw new Error('Music Server не вернул аудиофайл.');
+        }
+
+        musicAudio.src = audioUrl;
+        musicAudio.load();
+        musicDownload.href = audioUrl;
         musicResult.style.display = 'block';
         setMusicStatus('success', 'Готово!', 'Музыка создана.');
       } catch (e) {
-        setMusicStatus('error', 'Ошибка', e?.message || 'Не удалось создать музыку.');
+        console.error('Music generation error:', e);
+        setMusicStatus('error', 'Ошибка', e?.message || 'Не удалось подключиться к Music Server.');
       } finally {
         generateButton.disabled = false;
       }
